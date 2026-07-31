@@ -1,9 +1,11 @@
-const CACHE_NAME = 'kitchen-os-v312-inventory-conversion';
+const CACHE_NAME = 'kitchen-os-v41-weekly';
 
 const ASSETS = [
   './',
   './index.html',
   './weekly.html',
+  './weekly-v4/styles.css',
+  './weekly-v4/app.js',
   './daily.html',
   './import.html',
   './item-master.js',
