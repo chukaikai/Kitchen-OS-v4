@@ -6,6 +6,8 @@
     <meta name="theme-color" content="#173f35" />
     <title>Kitchen OS v4.1｜101 Weekly</title>
     <link rel="stylesheet" href="weekly-v4/styles.css" />
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
     <script src="weekly-v4/app.js" defer></script>
   </head>
   <body>
@@ -36,6 +38,16 @@
           <input id="searchInput" type="search" placeholder="搜尋品項或單位" autocomplete="off" />
         </label>
         <p class="item-count" id="itemCount"></p>
+      </section>
+      <section class="prep-sync" aria-label="備料盤點同步">
+        <div>
+          <strong>站上數量來自備料每日盤點</strong>
+          <p id="prepSyncMessage">選擇日期後，系統會抓取各站「盤點」欄位並自動換算。</p>
+        </div>
+        <label>盤點日期
+          <input id="inventoryDate" type="date" />
+        </label>
+        <button id="loadPrepButton" type="button">抓取站上盤點</button>
       </section>
 
       <section class="table-card" id="inventorySection" aria-label="101 Cold 週盤點">

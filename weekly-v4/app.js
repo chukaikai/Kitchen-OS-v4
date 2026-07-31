@@ -224,6 +224,62 @@ const emptyState = document.querySelector("#emptyState");
 const saveState = document.querySelector("#saveState");
 const stationTabs = document.querySelector(".station-tabs");
 const inventorySection = document.querySelector("#inventorySection");
+const inventoryDate = document.querySelector("#inventoryDate");
+const loadPrepButton = document.querySelector("#loadPrepButton");
+const prepSyncMessage = document.querySelector("#prepSyncMessage");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCFTPiF6H-mpu3-hiUFDZv0okkQxv9PH1g",
+  authDomain: "kitchen-os-fad49.firebaseapp.com",
+  projectId: "kitchen-os-fad49",
+  storageBucket: "kitchen-os-fad49.firebasestorage.app",
+  messagingSenderId: "663452568096",
+  appId: "1:663452568096:web:8a9c5a8d96d8a205918a45",
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// 每一條規則：Weekly 品項順序、備料表列號（由 0 開始）、換算倍率。
+// 同一品項可加總多個備料列。S2 墨魚絲依確認規格採 1 盒＝10 份、300g／盒。
+const PREP_TO_WEEKLY = {
+  cold: [
+    { order: 1, sources: [[22, 0.375]], note: "章魚：1盒×5份×75g＝0.375kg" },
+    { order: 27, sources: [[25, 0.25]] },
+    { order: 29, sources: [[15, 0.25]] },
+    { order: 34, sources: [[6, 0.4]] },
+    { order: 36, sources: [[8, 0.25]] },
+    { order: 37, sources: [[18, 0.25], [24, 0.25]] },
+    { order: 38, sources: [[3, 0.03]] },
+    { order: 40, sources: [[2, 0.03]] },
+    { order: 41, sources: [[1, 0.7]] },
+    { order: 43, sources: [[0, 0.3]] },
+    { order: 54, sources: [[9, 0.5]] },
+    { order: 55, sources: [[20, 0.25]] },
+    { order: 56, sources: [[21, 0.25]] },
+  ],
+  s1: [
+    { order: 2, sources: [[16, 0.21]] },
+    { order: 3, sources: [[7, 0.11]] },
+    { order: 4, sources: [[6, 0.11]] },
+    { order: 26, sources: [[10, 1]] },
+    { order: 29, sources: [[0, 1]] },
+    { order: 34, sources: [[11, 0.3]] },
+    { order: 35, sources: [[1, 0.025]] },
+  ],
+  s2: [
+    { order: 14, sources: [[5, 0.46875]], note: "墨魚絲：300g／盒 ÷ 640g／袋" },
+    { order: 31, sources: [[0, 0.05], [1, 0.1], [2, 0.2]] },
+    { order: 32, sources: [[3, 0.15]] },
+    { order: 34, sources: [[7, 0.03]] },
+    { order: 35, sources: [[8, 0.05]] },
+  ],
+  pizza: [
+    { order: 8, sources: [[0, 4]] },
+    { order: 13, sources: [[5, 0.001]] },
+    { order: 14, sources: [[3, 0.4]] },
+    { order: 15, sources: [[10, 0.001]] },
+  ],
+};
 
 let activeStation = "cold";
 let inventory = loadInventory(activeStation);
@@ -275,8 +331,68 @@ function createNumberInput(item, field) {
   input.value = inventory[item.order]?.[field] ?? "";
   input.dataset.order = String(item.order);
   input.dataset.field = field;
+  if (field === "station" && inventory[item.order]?.prepLinked) {
+    input.readOnly = true;
+    input.title = inventory[item.order].prepNote || "由備料每日盤點自動帶入";
+  }
   input.setAttribute("aria-label", `${item.name} ${field === "storage" ? "儲位" : "站上"}`);
   return input;
+}
+
+function dateKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+async function getPrepInventory(station, date) {
+  let data = null;
+  try {
+    const snap = await db.collection("dailyInventory").doc(`prep-${station}-${date}`).get();
+    if (snap.exists) data = snap.data();
+  } catch (error) {
+    console.warn("雲端備料盤點讀取失敗，改用本機資料", error);
+  }
+  return data || JSON.parse(localStorage.getItem(`kos-daily-v06-prep-${station}-${date}`) || "null");
+}
+
+async function loadPrepInventory() {
+  const date = inventoryDate.value;
+  if (!date) return;
+  loadPrepButton.disabled = true;
+  prepSyncMessage.textContent = "正在讀取備料盤點…";
+  let linked = 0;
+  let missingStations = 0;
+
+  for (const [station, rules] of Object.entries(PREP_TO_WEEKLY)) {
+    const saved = await getPrepInventory(station, date);
+    const stationInventory = loadInventory(station);
+    if (!saved?.rows) {
+      missingStations += 1;
+      continue;
+    }
+    rules.forEach((rule) => {
+      let hasValue = false;
+      const converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
+        const raw = saved.rows[rowIndex]?.actual;
+        if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
+        return sum + toNumber(raw) * factor;
+      }, 0);
+      if (!hasValue) return;
+      stationInventory[rule.order] ||= {};
+      stationInventory[rule.order].station = formatNumber(converted);
+      stationInventory[rule.order].prepLinked = true;
+      stationInventory[rule.order].prepDate = date;
+      stationInventory[rule.order].prepNote = rule.note || `由 ${date} 備料盤點換算`;
+      linked += 1;
+    });
+    localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
+  }
+
+  inventory = loadInventory(activeStation);
+  renderItems();
+  prepSyncMessage.textContent = linked
+    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。`
+    : `找不到 ${date} 已儲存的備料盤點，請先到「備料每日盤點表」填寫並儲存。`;
+  loadPrepButton.disabled = false;
 }
 
 function createRow(item) {
@@ -372,3 +488,5 @@ stationTabs.addEventListener("click", (event) => {
 });
 
 renderItems();
+inventoryDate.value = dateKey();
+loadPrepButton.addEventListener("click", loadPrepInventory);
