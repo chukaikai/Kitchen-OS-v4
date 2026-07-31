@@ -463,9 +463,21 @@ function createRow(item) {
   unitCell.textContent = item.unit || "—";
 
   const storageCell = document.createElement("td");
+  if (conversion?.storageUnit) {
+    const storageUnit = document.createElement("span");
+    storageUnit.className = "inventory-unit-label";
+    storageUnit.textContent = `盤${conversion.storageUnit}`;
+    storageCell.append(storageUnit);
+  }
   storageCell.append(createNumberInput(item, "storage"));
 
   const stationCell = document.createElement("td");
+  if (conversion?.stationUnit) {
+    const stationUnit = document.createElement("span");
+    stationUnit.className = "inventory-unit-label";
+    stationUnit.textContent = `盤${conversion.stationUnit}`;
+    stationCell.append(stationUnit);
+  }
   stationCell.append(createNumberInput(item, "station"));
 
   const totalCell = document.createElement("td");

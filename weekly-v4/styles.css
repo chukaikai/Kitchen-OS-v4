@@ -228,6 +228,16 @@ h1 {
   line-height: 1.35;
 }
 
+.inventory-unit-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--forest-700);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+
 @media (max-width: 720px) {
   .prep-sync { grid-template-columns: 1fr 1fr; }
   .prep-sync > div { grid-column: 1 / -1; }
