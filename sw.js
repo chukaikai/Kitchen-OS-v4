@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-station-inventory-v4';
+const CACHE_NAME = 'kitchen-os-v41-station-inventory-v5';
 
 const ASSETS = [
   './',

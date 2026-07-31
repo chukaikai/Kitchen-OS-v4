@@ -298,6 +298,28 @@ const PREP_TO_WEEKLY = {
   ],
 };
 
+// Weekly 的儲位與站上可能使用不同盤點單位；TOTAL 一律依品項主單位換算。
+// S1：修清肋眼（包＋包→kg）、極細脆薯條（袋＋份→袋）。
+// 三種舒肥肉維持原流程：備料份數先換算成kg，再帶入Weekly站上欄。
+const WEEKLY_CONVERSIONS = {
+  s1: {
+    1: {
+      storageFactor: 0.47,
+      stationFactor: 0.47,
+      storageUnit: "包",
+      stationUnit: "包",
+      note: "1包＝0.47kg",
+    },
+    21: {
+      storageFactor: 1,
+      stationFactor: 0.15 / 1.82,
+      storageUnit: "袋",
+      stationUnit: "份",
+      note: "1份＝0.15kg；1袋＝1.82kg",
+    },
+  },
+};
+
 let activeStation = "cold";
 let inventory = loadInventory(activeStation);
 let saveTimer;
@@ -352,7 +374,15 @@ function createNumberInput(item, field) {
     input.readOnly = true;
     input.title = inventory[item.order].prepNote || "由備料每日盤點自動帶入";
   }
-  input.setAttribute("aria-label", `${item.name} ${field === "storage" ? "儲位" : "站上"}`);
+  const conversion = WEEKLY_CONVERSIONS[activeStation]?.[item.order];
+  const fieldUnit = field === "storage" ? conversion?.storageUnit : conversion?.stationUnit;
+  input.setAttribute(
+    "aria-label",
+    `${item.name} ${field === "storage" ? "儲位" : "站上"}${fieldUnit ? `（${fieldUnit}）` : ""}`,
+  );
+  if (fieldUnit && !input.title) {
+    input.title = `${field === "storage" ? "儲位" : "站上"}請輸入${fieldUnit}；${conversion.note}`;
+  }
   return input;
 }
 
@@ -420,6 +450,13 @@ function createRow(item) {
   const nameCell = document.createElement("td");
   nameCell.className = "item-name";
   nameCell.textContent = item.name;
+  const conversion = WEEKLY_CONVERSIONS[activeStation]?.[item.order];
+  if (conversion) {
+    const note = document.createElement("small");
+    note.className = "conversion-hint";
+    note.textContent = `儲位盤${conversion.storageUnit}｜站上盤${conversion.stationUnit}｜${conversion.note}`;
+    nameCell.append(note);
+  }
 
   const unitCell = document.createElement("td");
   unitCell.className = "unit";
@@ -443,7 +480,11 @@ function createRow(item) {
 
 function updateTotal(order, target) {
   const values = inventory[order] || {};
-  const total = toNumber(values.storage) + toNumber(values.station);
+  const conversion = WEEKLY_CONVERSIONS[activeStation]?.[order];
+  const total = conversion
+    ? toNumber(values.storage) * conversion.storageFactor +
+      toNumber(values.station) * conversion.stationFactor
+    : toNumber(values.storage) + toNumber(values.station);
   const cell =
     target || document.querySelector(`[data-total-for="${order}"]`);
   if (cell) cell.textContent = formatNumber(total);
