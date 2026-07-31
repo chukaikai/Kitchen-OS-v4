@@ -300,6 +300,7 @@ const PREP_TO_WEEKLY = {
 
 // Weekly 的儲位與站上可能使用不同盤點單位；TOTAL 一律依品項主單位換算。
 // S1：修清肋眼（包＋包→kg）、極細脆薯條（袋＋份→袋）。
+// 指定醬料與乾料：儲位盤原包裝、站上盤總重kg，TOTAL換算為原包裝數。
 // 三種舒肥肉維持原流程：備料份數先換算成kg，再帶入Weekly站上欄。
 const WEEKLY_CONVERSIONS = {
   s1: {
@@ -310,12 +311,110 @@ const WEEKLY_CONVERSIONS = {
       stationUnit: "包",
       note: "1包＝0.47kg",
     },
+    6: {
+      storageFactor: 1,
+      stationFactor: 1,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝1kg",
+    },
+    8: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.3,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝0.3kg",
+    },
+    10: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.25,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝0.25kg",
+    },
+    13: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.3,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝0.3kg",
+    },
+    14: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.3,
+      storageUnit: "條",
+      stationUnit: "kg",
+      note: "1條＝0.3kg",
+    },
+    16: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.2,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝0.2kg",
+    },
+    19: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.5,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝0.5kg",
+    },
     21: {
       storageFactor: 1,
       stationFactor: 0.15 / 1.82,
       storageUnit: "袋",
       stationUnit: "份",
       note: "1份＝0.15kg；1袋＝1.82kg",
+    },
+    23: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.3,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝0.3kg",
+    },
+    24: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.3,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝0.3kg",
+    },
+    27: {
+      storageFactor: 1,
+      stationFactor: 1,
+      storageUnit: "包",
+      stationUnit: "kg",
+      note: "1包＝1kg",
+    },
+    40: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.14,
+      storageUnit: "瓶",
+      stationUnit: "kg",
+      note: "1瓶＝0.14kg",
+    },
+    42: {
+      storageFactor: 1,
+      stationFactor: 1 / 3.23,
+      storageUnit: "袋",
+      stationUnit: "kg",
+      note: "1袋＝3.23kg",
+    },
+    46: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.3,
+      storageUnit: "瓶",
+      stationUnit: "kg",
+      note: "1瓶＝0.3kg",
+    },
+    47: {
+      storageFactor: 1,
+      stationFactor: 1 / 0.375,
+      storageUnit: "盒",
+      stationUnit: "kg",
+      note: "1盒＝0.375kg",
     },
   },
 };
