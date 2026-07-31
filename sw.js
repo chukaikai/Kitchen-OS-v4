@@ -1,9 +1,10 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly';
+const CACHE_NAME = 'kitchen-os-v41-weekly-prep-fix';
 
 const ASSETS = [
   './',
   './index.html',
   './weekly.html',
+  './weekly-app.html',
   './weekly-v4/styles.css',
   './weekly-v4/app.js',
   './daily.html',
