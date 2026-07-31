@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#173f35" />
-    <title>Kitchen OS v4.1｜101 Cold Weekly</title>
+    <title>Kitchen OS v4.1｜101 Weekly</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
   </head>
@@ -13,7 +13,7 @@
       <div class="header-inner">
         <div>
           <p class="eyebrow">KITCHEN OS v4.1</p>
-          <h1>101 Cold｜Weekly</h1>
+          <h1>101 Weekly</h1>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">
           已載入
@@ -22,6 +22,13 @@
     </header>
 
     <main class="page-shell">
+      <nav class="station-tabs" aria-label="工作站切換">
+        <button class="station-tab active" type="button" data-station="cold">Cold</button>
+        <button class="station-tab" type="button" data-station="s1">S1</button>
+        <button class="station-tab" type="button" data-station="s2">S2</button>
+        <button class="station-tab" type="button" data-station="pizza">Pizza</button>
+      </nav>
+
       <section class="toolbar" aria-label="盤點工具">
         <label class="search-box" for="searchInput">
           <span aria-hidden="true">⌕</span>
@@ -35,7 +42,7 @@
         <p class="item-count" id="itemCount"></p>
       </section>
 
-      <section class="table-card" aria-label="101 Cold 週盤點">
+      <section class="table-card" id="inventorySection" aria-label="101 Cold 週盤點">
         <div class="table-scroll">
           <table>
             <thead>

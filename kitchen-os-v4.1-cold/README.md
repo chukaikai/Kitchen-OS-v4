@@ -1,10 +1,11 @@
-# Kitchen OS v4.1 — 101 Cold Weekly
+# Kitchen OS v4.1 — 101 Weekly
 
-第一階段僅包含「101 Cold」週盤點。
+包含「101 Cold、S1、S2、Pizza」四個 Weekly 盤點分頁。
 
 ## 功能
 
-- 依照 Excel「101周盤COLD」原始順序顯示 69 個品項
+- 依照 Excel 原始列順序顯示：Cold 69 項、S1 53 項、S2 41 項、Pizza 21 項
+- 工作站頁籤快速切換，各站盤點資料分開保存
 - 品項代碼不顯示
 - 欄位：品項、單位、儲位、站上、TOTAL
 - TOTAL 自動計算為「儲位 + 站上」，且不可編輯
