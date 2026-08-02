@@ -299,6 +299,13 @@ const PREP_TO_WEEKLY = {
   pizza: [
     { order: 8, sources: [[0, 4]] },
     {
+      targetCode: "CKC048",
+      targetName: "綜合起司包",
+      order: 2,
+      sources: [[6, 0.1]],
+      note: "退冰綜合起司包：每10份＝原包裝1包；每1份＝0.1包",
+    },
+    {
       targetCode: "CKC047",
       targetName: "佛特樂起司",
       order: 3,
