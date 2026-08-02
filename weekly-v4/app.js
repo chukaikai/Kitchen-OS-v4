@@ -299,6 +299,13 @@ const PREP_TO_WEEKLY = {
   pizza: [
     { order: 8, sources: [[0, 4]] },
     {
+      targetCode: "168020SS",
+      targetName: "ORO去皮整粒蕃茄",
+      order: 17,
+      sources: [[1, 2]],
+      note: "Pizza醬：每盒5kg＝ORO去皮整粒蕃茄2.5kg×2罐",
+    },
+    {
       order: 6,
       sources: [[8, 0.5]],
       note: "義式絞肉：每盒熟重400g，依80%烹調率回推生肉0.5kg",
