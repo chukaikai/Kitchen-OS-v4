@@ -429,103 +429,96 @@ const WEEKLY_CONVERSIONS = {
     },
   },
   s2: {
-    8: {
+    9: {
       storageFactor: 1,
       stationFactor: 1 / 150,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝150g",
     },
-    9: {
+    10: {
       storageFactor: 1,
       stationFactor: 1 / 1000,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝1000g",
     },
-    10: {
+    11: {
       storageFactor: 1,
       stationFactor: 1 / 500,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝500g",
     },
-    15: {
+    16: {
       storageFactor: 1,
       stationFactor: 1 / 100,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝100g",
     },
-    19: {
+    20: {
       storageFactor: 1,
       stationFactor: 1 / 1000,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝1000g",
     },
-    20: {
+    21: {
       storageFactor: 1,
       stationFactor: 1 / 500,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝500g",
     },
-    22: {
+    23: {
       storageFactor: 1,
       stationFactor: 1 / 600,
       storageUnit: "包",
       stationUnit: "g",
       note: "1包＝600g",
     },
-    23: {
+    24: {
       storageFactor: 1,
       stationFactor: 1 / 600,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝600g",
     },
-    25: {
+    26: {
       storageFactor: 1,
       stationFactor: 1 / 200,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝200g",
     },
-    26: {
+    27: {
       storageFactor: 1,
       stationFactor: 1 / 125,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝125g",
     },
-    27: {
+    28: {
       storageFactor: 1,
       stationFactor: 1 / 500,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝500g",
     },
-    28: {
+    29: {
       storageFactor: 1,
       stationFactor: 1 / 400,
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝400g",
     },
-    29: {
+    30: {
       storageFactor: 1,
       stationFactor: 1 / 500,
       storageUnit: "盒",
       stationUnit: "g",
       note: "1盒＝500g",
-    },
-    35: {
-      storageFactor: 1,
-      stationFactor: 1 / 200,
-      storageUnit: "袋",
-      stationUnit: "g",
-      note: "1袋＝200g",
     },
     36: {
       storageFactor: 1,
@@ -536,12 +529,19 @@ const WEEKLY_CONVERSIONS = {
     },
     37: {
       storageFactor: 1,
+      stationFactor: 1 / 200,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝200g",
+    },
+    38: {
+      storageFactor: 1,
       stationFactor: 1 / 340,
       storageUnit: "盒",
       stationUnit: "g",
       note: "1盒＝340g",
     },
-    38: {
+    39: {
       storageFactor: 1,
       stationFactor: 1 / 5000,
       storageUnit: "瓶",
