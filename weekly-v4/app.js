@@ -289,7 +289,7 @@ const PREP_TO_WEEKLY = {
     { order: 18, sources: [[18, 2 / 3]], note: "蝦醬：站上3桶＝紅蝦高湯2包" },
     { order: 19, sources: [[11, 1]], note: "綠沙沙醬：站上1罐＝巴西里青醬1包" },
     { order: 22, sources: [[4, 0.56]], note: "蝦仁：站上1盒＝8份×70g＝0.56kg" },
-    { order: 41, sources: [[6, 0.05]], note: "乾蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒乾蔥碎分開計算" },
+    { order: 41, sources: [[6, 0.05]], note: "甘蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒甘蔥碎分開計算" },
     { order: 31, sources: [[0, 0.05], [1, 0.1]], note: "巴西里碎與巴西里葉回推捲葉巴西里" },
     { order: 32, sources: [[3, 0.15]] },
     { order: 34, sources: [[7, 0.03]] },

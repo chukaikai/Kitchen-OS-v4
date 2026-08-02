@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-s2-station-grams-corrected-v15';
+const CACHE_NAME = 'kitchen-os-v41-s2-shallot-name-corrected-v16';
 
 const ASSETS = [
   './',
