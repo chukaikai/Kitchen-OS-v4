@@ -401,28 +401,93 @@ tbody tr:hover .total-cell {
     padding-left: 2px;
   }
 
-  table {
-    min-width: 760px;
+  .table-card {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
-  th,
+  .table-scroll { overflow: visible; }
+
+  table,
+  tbody { display: block; width: 100%; }
+
+  thead { display: none; }
+
+  tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: var(--surface);
+    box-shadow: 0 4px 16px rgb(34 52 44 / 6%);
+  }
+
+  tbody tr[hidden] { display: none; }
+
+  tbody tr:hover td { background: transparent; }
+
   td {
-    padding-right: 10px;
-    padding-left: 10px;
+    display: block;
+    width: auto !important;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
 
-  th:nth-child(1) {
-    width: 300px;
+  .item-name {
+    grid-column: 1 / -1;
+    font-size: 16px;
+    font-weight: 800;
   }
 
-  th:nth-child(2) {
-    width: 120px;
+  .unit {
+    grid-column: 1 / -1;
+    margin-top: -5px;
+    font-size: 13px;
   }
 
-  th:nth-child(3),
-  th:nth-child(4),
-  th:nth-child(5) {
-    width: 110px;
+  .unit::before { content: "單位："; }
+
+  .inventory-field::before,
+  .total-cell::before {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .inventory-field::before { content: attr(data-label); }
+  .total-cell::before { content: attr(data-label); }
+
+  .inventory-unit-label {
+    display: inline-block;
+    margin: 0 0 5px 5px;
+  }
+
+  .number-input {
+    min-width: 0;
+    height: 50px;
+    padding: 8px 12px;
+    font-size: 18px;
+  }
+
+  .total-cell {
+    grid-column: 1 / -1;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+
+  .total-cell::before {
+    display: inline;
+    margin-right: 8px;
   }
 }
 

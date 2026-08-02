@@ -290,7 +290,7 @@ const PREP_TO_WEEKLY = {
     { order: 19, sources: [[11, 1]], note: "綠沙沙醬：站上1罐＝巴西里青醬1包" },
     { order: 22, sources: [[4, 0.56]], note: "蝦仁：站上1盒＝8份×70g＝0.56kg" },
     { order: 41, sources: [[6, 0.05]], note: "乾蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒乾蔥碎分開計算" },
-    { order: 31, sources: [[0, 0.05], [1, 0.1], [2, 0.2]], note: "巴西里碎回推捲葉巴西里；三項合併計算" },
+    { order: 31, sources: [[0, 0.05], [1, 0.1]], note: "巴西里碎與巴西里葉回推捲葉巴西里" },
     { order: 32, sources: [[3, 0.15]] },
     { order: 34, sources: [[7, 0.03]] },
     { order: 35, sources: [[8, 0.05]] },
@@ -570,9 +570,12 @@ function createRow(item) {
 
   const unitCell = document.createElement("td");
   unitCell.className = "unit";
+  unitCell.dataset.label = "單位";
   unitCell.textContent = item.unit || "—";
 
   const storageCell = document.createElement("td");
+  storageCell.className = "inventory-field storage-field";
+  storageCell.dataset.label = "儲位";
   if (conversion?.storageUnit) {
     const storageUnit = document.createElement("span");
     storageUnit.className = "inventory-unit-label";
@@ -582,6 +585,8 @@ function createRow(item) {
   storageCell.append(createNumberInput(item, "storage"));
 
   const stationCell = document.createElement("td");
+  stationCell.className = "inventory-field station-field";
+  stationCell.dataset.label = "站上";
   if (conversion?.stationUnit) {
     const stationUnit = document.createElement("span");
     stationUnit.className = "inventory-unit-label";
@@ -592,6 +597,7 @@ function createRow(item) {
 
   const totalCell = document.createElement("td");
   totalCell.className = "total-cell";
+  totalCell.dataset.label = "TOTAL";
   totalCell.dataset.totalFor = String(item.order);
   totalCell.setAttribute("aria-label", `${item.name} TOTAL`);
 
@@ -645,6 +651,22 @@ inventoryBody.addEventListener("input", (event) => {
   inventory[order][field] = input.value;
   updateTotal(order);
   saveInventory();
+});
+
+inventoryBody.addEventListener("focusin", (event) => {
+  const input = event.target.closest(".number-input");
+  if (input && !input.readOnly) input.select();
+});
+
+inventoryBody.addEventListener("keydown", (event) => {
+  const input = event.target.closest(".number-input");
+  if (!input || event.key !== "Enter") return;
+  event.preventDefault();
+  const inputs = [...inventoryBody.querySelectorAll(".number-input:not([readonly])")]
+    .filter((field) => !field.closest("tr").hidden);
+  const next = inputs[inputs.indexOf(input) + 1];
+  if (next) next.focus();
+  else input.blur();
 });
 
 searchInput.addEventListener("input", filterItems);
