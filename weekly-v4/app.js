@@ -289,7 +289,7 @@ const PREP_TO_WEEKLY = {
     { order: 18, sources: [[18, 2 / 3]], note: "蝦醬：站上3桶＝紅蝦高湯2包" },
     { order: 19, sources: [[11, 1]], note: "綠沙沙醬：站上1罐＝巴西里青醬1包" },
     { order: 22, sources: [[4, 0.56]], note: "蝦仁：站上1盒＝8份×70g＝0.56kg" },
-    { order: 41, sources: [[6, 0.05]], note: "甘蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒甘蔥碎分開計算" },
+    { order: 42, sources: [[6, 0.05]], note: "甘蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒甘蔥碎分開計算" },
     { order: 31, sources: [[0, 0.05], [1, 0.1]], note: "巴西里碎與巴西里葉回推捲葉巴西里" },
     { order: 32, sources: [[3, 0.15]] },
     { order: 34, sources: [[7, 0.03]] },
@@ -646,6 +646,18 @@ async function loadPrepInventory() {
     if (!saved?.rows) {
       missingStations += 1;
       continue;
+    }
+    // v18 修正：舊版曾將 S2 甘蔥碎誤寫到第 41 項白米。
+    // 只清除由該錯誤回推建立的數字，不影響人員手動盤點的白米。
+    if (
+      station === "s2" &&
+      stationInventory[41]?.prepLinked &&
+      /甘蔥碎|乾蔥/.test(stationInventory[41]?.prepNote || "")
+    ) {
+      delete stationInventory[41].station;
+      delete stationInventory[41].prepLinked;
+      delete stationInventory[41].prepDate;
+      delete stationInventory[41].prepNote;
     }
     rules.forEach((rule) => {
       let hasValue = false;
