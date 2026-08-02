@@ -299,6 +299,13 @@ const PREP_TO_WEEKLY = {
   pizza: [
     { order: 8, sources: [[0, 4]] },
     {
+      targetCode: "CKC047",
+      targetName: "佛特樂起司",
+      order: 3,
+      sources: [[4, 0.2]],
+      note: "佛特樂乾酪：每盒500g ÷ 2.5kg／包＝0.2包",
+    },
+    {
       targetCode: "168020SS",
       targetName: "ORO去皮整粒蕃茄",
       order: 17,

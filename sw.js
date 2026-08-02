@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-pizza-sauce-oro-fix-v20';
+const CACHE_NAME = 'kitchen-os-v41-pizza-cheese-fix-v21';
 
 const ASSETS = [
   './',
