@@ -289,7 +289,7 @@ const PREP_TO_WEEKLY = {
     { order: 18, sources: [[18, 2 / 3]], note: "蝦醬：站上3桶＝紅蝦高湯2包" },
     { order: 19, sources: [[11, 1]], note: "綠沙沙醬：站上1罐＝巴西里青醬1包" },
     { order: 22, sources: [[4, 0.56]], note: "蝦仁：站上1盒＝8份×70g＝0.56kg" },
-    { order: 42, sources: [[6, 0.05]], note: "甘蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒甘蔥碎分開計算" },
+    { targetCode: "142004SS", targetName: "乾蔥", order: 42, sources: [[6, 0.05]], note: "甘蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒甘蔥碎分開計算" },
     { order: 31, sources: [[0, 0.05], [1, 0.1]], note: "巴西里碎與巴西里葉回推捲葉巴西里" },
     { order: 32, sources: [[3, 0.15]] },
     { order: 34, sources: [[7, 0.03]] },
@@ -639,6 +639,23 @@ async function loadPrepInventory() {
   prepSyncMessage.textContent = "正在讀取備料盤點…";
   let linked = 0;
   let missingStations = 0;
+  let s2ShallotValue = null;
+
+  function resolveTargetOrder(station, rule) {
+    const items = STATIONS[station]?.items || [];
+    if (rule.targetCode) {
+      const exact = items.find((item) =>
+        item.code === rule.targetCode &&
+        (!rule.targetName || item.name.includes(rule.targetName))
+      );
+      if (exact) return exact.order;
+    }
+    if (rule.targetName) {
+      const byName = items.find((item) => item.name.includes(rule.targetName));
+      if (byName) return byName.order;
+    }
+    return rule.order;
+  }
 
   for (const [station, rules] of Object.entries(PREP_TO_WEEKLY)) {
     const saved = await getPrepInventory(station, date);
@@ -667,11 +684,15 @@ async function loadPrepInventory() {
         return sum + toNumber(raw) * factor;
       }, 0);
       if (!hasValue) return;
-      stationInventory[rule.order] ||= {};
-      stationInventory[rule.order].station = formatNumber(converted);
-      stationInventory[rule.order].prepLinked = true;
-      stationInventory[rule.order].prepDate = date;
-      stationInventory[rule.order].prepNote = rule.note || `由 ${date} 備料盤點換算`;
+      const targetOrder = resolveTargetOrder(station, rule);
+      stationInventory[targetOrder] ||= {};
+      stationInventory[targetOrder].station = formatNumber(converted);
+      stationInventory[targetOrder].prepLinked = true;
+      stationInventory[targetOrder].prepDate = date;
+      stationInventory[targetOrder].prepNote = rule.note || `由 ${date} 備料盤點換算`;
+      if (station === "s2" && rule.targetCode === "142004SS") {
+        s2ShallotValue = formatNumber(converted);
+      }
       linked += 1;
     });
     localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
@@ -680,7 +701,7 @@ async function loadPrepInventory() {
   inventory = loadInventory(activeStation);
   renderItems();
   prepSyncMessage.textContent = linked
-    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。`
+    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
     : `找不到 ${date} 已儲存的備料盤點，請先到「備料每日盤點表」填寫並儲存。`;
   loadPrepButton.disabled = false;
 }
