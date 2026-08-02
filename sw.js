@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-mobile-weekly-cards-v13';
+const CACHE_NAME = 'kitchen-os-v41-s2-station-grams-v14';
 
 const ASSETS = [
   './',
