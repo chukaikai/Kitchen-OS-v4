@@ -335,6 +335,27 @@ const PREP_TO_WEEKLY = {
 // 指定醬料與乾料：儲位盤原包裝、站上盤總重g，TOTAL換算為原包裝數。
 // 三種舒肥肉維持原流程：備料份數先換算成kg，再帶入Weekly站上欄。
 const WEEKLY_CONVERSIONS = {
+  cold: {
+    2: { storageFactor: 1, stationFactor: 1 / 200, storageUnit: "袋", stationUnit: "g", note: "1袋＝200g" },
+    3: { storageFactor: 1, stationFactor: 1 / 350, storageUnit: "袋", stationUnit: "g", note: "1袋＝350g" },
+    4: { storageFactor: 1, stationFactor: 1 / 200, storageUnit: "袋", stationUnit: "g", note: "1袋＝200g" },
+    6: { storageFactor: 1, stationFactor: 1 / 200, storageUnit: "袋", stationUnit: "g", note: "1袋＝200g" },
+    8: { storageFactor: 1, stationFactor: 1 / 300, storageUnit: "袋", stationUnit: "g", note: "1袋＝300g" },
+    11: { storageFactor: 1, stationFactor: 1 / 220, storageUnit: "包", stationUnit: "g", note: "1包＝220g" },
+    15: { storageFactor: 1, stationFactor: 1 / 800, storageUnit: "袋", stationUnit: "g", note: "1袋＝800g" },
+    16: { storageFactor: 1, stationFactor: 1 / 800, storageUnit: "包", stationUnit: "g", note: "1包＝800g" },
+    17: { storageFactor: 1, stationFactor: 1 / 800, storageUnit: "袋", stationUnit: "g", note: "1袋＝800g" },
+    18: { storageFactor: 1, stationFactor: 1 / 800, storageUnit: "袋", stationUnit: "g", note: "1袋＝800g" },
+    19: { storageFactor: 1, stationFactor: 1 / 800, storageUnit: "袋", stationUnit: "g", note: "1袋＝800g" },
+    20: { storageFactor: 1, stationFactor: 1 / 200, storageUnit: "袋", stationUnit: "g", note: "1袋＝200g" },
+    21: { storageFactor: 1, stationFactor: 1 / 450, storageUnit: "袋", stationUnit: "g", note: "1袋＝450g" },
+    22: { storageFactor: 1, stationFactor: 1 / 600, storageUnit: "袋", stationUnit: "g", note: "1袋＝600g" },
+    47: { storageFactor: 1, stationFactor: 1 / 100, storageUnit: "袋", stationUnit: "g", note: "1袋＝100g" },
+    48: { storageFactor: 1, stationFactor: 1 / 50, storageUnit: "袋", stationUnit: "g", note: "1袋＝50g" },
+    49: { storageFactor: 1, stationFactor: 1 / 200, storageUnit: "袋", stationUnit: "g", note: "1袋＝200g" },
+    50: { storageFactor: 1, stationFactor: 1 / 300, storageUnit: "袋", stationUnit: "g", note: "1袋＝300g" },
+    52: { storageFactor: 1, stationFactor: 1 / 500, storageUnit: "袋", stationUnit: "g", note: "1袋＝500g（6袋／箱）" },
+  },
   s1: {
     1: {
       storageFactor: 0.47,
