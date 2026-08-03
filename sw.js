@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-pizza-combined-cheese-fix-v22';
+const CACHE_NAME = 'kitchen-os-v41-pizza-weekly-station-g-v23';
 
 const ASSETS = [
   './',

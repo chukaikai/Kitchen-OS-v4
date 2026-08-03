@@ -570,6 +570,64 @@ const WEEKLY_CONVERSIONS = {
       note: "1瓶＝5000g（依5L規格換算）",
     },
   },
+  pizza: {
+    5: {
+      storageFactor: 1,
+      stationFactor: 1 / 1000,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝1000g",
+    },
+    9: {
+      storageFactor: 1,
+      stationFactor: 1 / 1000,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝1000g",
+    },
+    10: {
+      storageFactor: 1,
+      stationFactor: 1 / 1800,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝1800g",
+    },
+    11: {
+      storageFactor: 1,
+      stationFactor: 1 / 1100,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝1100g",
+    },
+    16: {
+      storageFactor: 1,
+      stationFactor: 1 / 250,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝250g",
+    },
+    18: {
+      storageFactor: 1,
+      stationFactor: 1 / 1000,
+      storageUnit: "包",
+      stationUnit: "g",
+      note: "1包＝1000g",
+    },
+    19: {
+      storageFactor: 1,
+      stationFactor: 1 / 1000,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝1000g",
+    },
+    20: {
+      storageFactor: 1,
+      stationFactor: 1 / 500,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "1袋＝500g",
+    },
+  },
 };
 
 let activeStation = "cold";
