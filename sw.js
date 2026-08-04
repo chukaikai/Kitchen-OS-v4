@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-cold-prep-backcalc-v24';
+const CACHE_NAME = 'kitchen-os-v41-cold-tomato-backcalc-v25';
 
 const ASSETS = [
   './',

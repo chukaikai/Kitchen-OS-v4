@@ -790,6 +790,7 @@ async function loadPrepInventory() {
   let linked = 0;
   let missingStations = 0;
   let s2ShallotValue = null;
+  let coldTomatoValues = null;
 
   function resolveTargetOrder(station, rule) {
     const items = STATIONS[station]?.items || [];
@@ -845,13 +846,40 @@ async function loadPrepInventory() {
       }
       linked += 1;
     });
+
+    // 醃綜合蕃茄固定拆料：直接用品項代碼定位兩種鮮蕃茄，避免名稱中的
+    // 「蕃／番」或「綜合櫻」規格文字差異造成同步漏項。
+    if (station === "cold") {
+      const tomatoBoxesRaw = saved.rows[10]?.actual;
+      if (
+        tomatoBoxesRaw !== "" &&
+        tomatoBoxesRaw != null &&
+        Number.isFinite(Number(tomatoBoxesRaw))
+      ) {
+        const tomatoKg = toNumber(tomatoBoxesRaw);
+        const tomatoTargets = [
+          ["144011SS", "聖女蕃茄（中）"],
+          ["142022SS", "綜合彩色番茄(綜合櫻)"],
+        ];
+        tomatoTargets.forEach(([code, name]) => {
+          const target = STATIONS.cold.items.find((item) => item.code === code);
+          if (!target) return;
+          stationInventory[target.order] ||= {};
+          stationInventory[target.order].station = formatNumber(tomatoKg);
+          stationInventory[target.order].prepLinked = true;
+          stationInventory[target.order].prepDate = date;
+          stationInventory[target.order].prepNote = `醃綜合蕃茄：每盒回推${name} 1kg`;
+        });
+        coldTomatoValues = formatNumber(tomatoKg);
+      }
+    }
     localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
   }
 
   inventory = loadInventory(activeStation);
   renderItems();
   prepSyncMessage.textContent = linked
-    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
+    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${coldTomatoValues !== null ? ` COLD聖女蕃茄：${coldTomatoValues} kg；綜合彩色番茄：${coldTomatoValues} kg。` : ""}${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
     : `找不到 ${date} 已儲存的備料盤點，請先到「備料每日盤點表」填寫並儲存。`;
   loadPrepButton.disabled = false;
 }
