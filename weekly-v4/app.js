@@ -72,6 +72,8 @@ const COLD_ITEMS = [
   [67, "164009SS", "鷹嘴豆/400克/罐", "Can / 罐"],
   [68, "162038SS", "美廚-薑黃粉400克/瓶", "Btl / 瓶"],
   [69, "185010SS", "純糖粉1K/BAG", "包"],
+  [70, "145003SS", "薄荷/公斤", "Kg / 公斤"],
+  [71, "142004SS", "乾蔥(紅蔥頭)/公斤", "Kg / 公斤"],
 ].map(([order, code, name, unit]) => ({ order, code, name, unit }));
 
 function makeItems(rows) {
@@ -246,6 +248,55 @@ const db = firebase.firestore();
 const PREP_TO_WEEKLY = {
   cold: [
     { order: 1, sources: [[22, 0.375]], note: "章魚：1盒×5份×75g＝0.375kg" },
+    {
+      targetCode: "145003SS",
+      targetName: "薄荷",
+      order: 70,
+      sources: [[4, 0.03]],
+      note: "薄荷：每盒30g＝0.03kg",
+    },
+    {
+      targetCode: "142001SS",
+      targetName: "紅辣椒",
+      order: 33,
+      sources: [[7, 0.1]],
+      note: "辣椒切片：每盒100g＝紅辣椒0.1kg",
+    },
+    {
+      targetCode: "168003SS",
+      targetName: "紅藜麥",
+      order: 54,
+      sources: [[9, 0.21]],
+      note: "半成品紅藜麥：每盒回推生紅藜麥0.21包",
+    },
+    {
+      targetCode: "CKC000004",
+      targetName: "番茄沙拉醃汁",
+      order: 7,
+      sources: [[10, 1]],
+      note: "醃綜合蕃茄：每盒使用蕃茄醃汁1包",
+    },
+    {
+      targetCode: "144011SS",
+      targetName: "聖女蕃茄",
+      order: 42,
+      sources: [[10, 1]],
+      note: "醃綜合蕃茄：每盒使用聖女蕃茄（中）1kg",
+    },
+    {
+      targetCode: "142022SS",
+      targetName: "綜合彩色番茄",
+      order: 44,
+      sources: [[10, 1]],
+      note: "醃綜合蕃茄：每盒使用綜合彩色番茄1kg",
+    },
+    {
+      targetCode: "142004SS",
+      targetName: "乾蔥",
+      order: 71,
+      sources: [[10, 0.065]],
+      note: "醃綜合蕃茄：每盒使用乾蔥0.065kg；百里香與EVO不回推",
+    },
     { order: 27, sources: [[25, 0.25]] },
     { order: 29, sources: [[15, 0.25]] },
     { order: 34, sources: [[6, 0.4]] },
@@ -255,7 +306,6 @@ const PREP_TO_WEEKLY = {
     { order: 40, sources: [[2, 0.03]] },
     { order: 41, sources: [[1, 0.7]] },
     { order: 43, sources: [[0, 0.3]] },
-    { order: 54, sources: [[9, 0.5]] },
     { order: 55, sources: [[20, 0.25]] },
     { order: 56, sources: [[21, 0.25]] },
   ],
