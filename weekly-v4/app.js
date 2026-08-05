@@ -270,6 +270,13 @@ const PREP_TO_WEEKLY = {
       note: "半成品紅藜麥：每盒回推生紅藜麥0.21包",
     },
     {
+      targetCode: "168015SS",
+      targetName: "夏季5%黑松露醬",
+      order: 61,
+      sources: [[13, 0.16]],
+      note: "半成品松露醬：每罐使用黑松露醬80g，回推夏季5%黑松露醬500g／罐的0.16罐",
+    },
+    {
       targetCode: "CKC000004",
       targetName: "番茄沙拉醃汁",
       order: 7,
@@ -791,6 +798,7 @@ async function loadPrepInventory() {
   let missingStations = 0;
   let s2ShallotValue = null;
   let coldTomatoValues = null;
+  let coldTruffleValue = null;
 
   function resolveTargetOrder(station, rule) {
     const items = STATIONS[station]?.items || [];
@@ -844,6 +852,9 @@ async function loadPrepInventory() {
       if (station === "s2" && rule.targetCode === "142004SS") {
         s2ShallotValue = formatNumber(converted);
       }
+      if (station === "cold" && rule.targetCode === "168015SS") {
+        coldTruffleValue = formatNumber(converted);
+      }
       linked += 1;
     });
 
@@ -879,7 +890,7 @@ async function loadPrepInventory() {
   inventory = loadInventory(activeStation);
   renderItems();
   prepSyncMessage.textContent = linked
-    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${coldTomatoValues !== null ? ` COLD聖女蕃茄：${coldTomatoValues} kg；綜合彩色番茄：${coldTomatoValues} kg。` : ""}${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
+    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${coldTomatoValues !== null ? ` COLD聖女蕃茄：${coldTomatoValues} kg；綜合彩色番茄：${coldTomatoValues} kg。` : ""}${coldTruffleValue !== null ? ` COLD夏季5%黑松露醬：${coldTruffleValue}罐。` : ""}${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
     : `找不到 ${date} 已儲存的備料盤點，請先到「備料每日盤點表」填寫並儲存。`;
   loadPrepButton.disabled = false;
 }
