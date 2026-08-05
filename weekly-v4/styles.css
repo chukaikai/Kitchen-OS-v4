@@ -526,3 +526,5 @@ tbody tr:hover .total-cell {
       background 160ms ease;
   }
 }
+/* Multi-store context */
+.store-context-bar{position:sticky;top:0;z-index:1000;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 16px;background:#172554;color:#fff;font-size:14px;box-shadow:0 2px 8px #0002}.store-context-bar button{border:1px solid #ffffff66;border-radius:999px;background:#fff;color:#172554;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}

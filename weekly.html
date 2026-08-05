@@ -4,11 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#173f35" />
-    <title>Kitchen OS v4.1｜101 Weekly</title>
-    <link rel="stylesheet" href="weekly-v4/styles.css?v=20260805-summary-sort-v2" />
+    <title>Kitchen OS v4.1｜Weekly</title>
+    <link rel="stylesheet" href="weekly-v4/styles.css?v=20260805-multistore-v1" />
+    <script src="store-context.js?v=20260805-multistore-v1"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-    <script src="weekly-v4/app.js?v=20260805-summary-sort-v2" defer></script>
+    <script src="weekly-v4/app.js?v=20260805-multistore-v1" defer></script>
   </head>
   <body>
     <header class="app-header">
@@ -17,7 +18,7 @@
           <a class="home-link" href="index.html" aria-label="返回 Kitchen OS 首頁">‹ 首頁</a>
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
-            <h1>101 Weekly</h1>
+            <h1>Weekly 周盤</h1>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -51,7 +52,7 @@
         <button id="loadPrepButton" type="button">抓取並換算站上庫存</button>
       </section>
 
-      <section class="table-card" id="inventorySection" aria-label="101 Cold 週盤點">
+      <section class="table-card" id="inventorySection" aria-label="Cold 週盤點">
         <div class="table-scroll">
           <table>
             <thead>

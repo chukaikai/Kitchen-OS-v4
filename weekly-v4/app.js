@@ -920,7 +920,7 @@ function dateKey(date = new Date()) {
 async function getPrepInventory(station, date) {
   let data = null;
   try {
-    const snap = await db.collection("dailyInventory").doc(`prep-${station}-${date}`).get();
+    const snap = await db.collection("dailyInventory").doc(KitchenStore.cloudId(`prep-${station}-${date}`)).get();
     if (snap.exists) data = snap.data();
   } catch (error) {
     console.warn("雲端備料盤點讀取失敗，改用本機資料", error);
@@ -1172,8 +1172,8 @@ stationTabs.addEventListener("click", (event) => {
   });
   const isSummary = activeStation === "summary";
   inventorySection.setAttribute("aria-label", isSummary
-    ? "101 各站周盤整店總表"
-    : `101 ${STATIONS[activeStation].label} 週盤點`);
+    ? `${KitchenStore.current.name} 各站周盤整店總表`
+    : `${KitchenStore.current.name} ${STATIONS[activeStation].label} 週盤點`);
   prepSyncSection.hidden = isSummary;
   setTableHead(isSummary);
   saveState.textContent = "已載入";

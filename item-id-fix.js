@@ -37,7 +37,7 @@
     localStorage.setItem('kos-import-central-current', JSON.stringify(fixed));
     try {
       if (window.db) {
-        await window.db.collection('deliveries').doc(fixed.deliveryDate).set(fixed, { merge: true });
+        await window.db.collection('deliveries').doc(KitchenStore.cloudId(fixed.deliveryDate)).set(fixed, { merge: true });
       }
     } catch (error) {
       console.warn('Item ID 雲端補寫失敗', error);

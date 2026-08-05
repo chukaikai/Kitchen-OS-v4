@@ -1,8 +1,9 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly-store-summary-sort-v28';
+const CACHE_NAME = 'kitchen-os-v41-multistore-v1';
 
 const ASSETS = [
   './',
   './index.html',
+  './store-context.js',
   './weekly.html',
   './weekly-app.html',
   './weekly-v4/styles.css',

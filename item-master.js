@@ -146,7 +146,7 @@
       if (window.firebase?.firestore) {
         await window.firebase.firestore()
           .collection('deliveries')
-          .doc(fixed.deliveryDate)
+          .doc(KitchenStore.cloudId(fixed.deliveryDate))
           .set(fixed, { merge: true });
       }
     } catch (error) {
