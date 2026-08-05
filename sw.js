@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-cold-truffle-backcalc-v26';
+const CACHE_NAME = 'kitchen-os-v41-weekly-store-summary-v27';
 
 const ASSETS = [
   './',

@@ -231,6 +231,8 @@ const inventorySection = document.querySelector("#inventorySection");
 const inventoryDate = document.querySelector("#inventoryDate");
 const loadPrepButton = document.querySelector("#loadPrepButton");
 const prepSyncMessage = document.querySelector("#prepSyncMessage");
+const inventoryHeadRow = document.querySelector("#inventoryHeadRow");
+const prepSyncSection = document.querySelector(".prep-sync");
 
 const firebaseConfig = {
   apiKey: "AIzaSyCFTPiF6H-mpu3-hiUFDZv0okkQxv9PH1g",
@@ -736,6 +738,98 @@ function formatNumber(value) {
     : String(Number(value.toFixed(3)));
 }
 
+function itemTotal(station, item, stationInventory = loadInventory(station)) {
+  const values = stationInventory[item.order] || {};
+  const conversion = WEEKLY_CONVERSIONS[station]?.[item.order];
+  return conversion
+    ? toNumber(values.storage) * conversion.storageFactor +
+        toNumber(values.station) * conversion.stationFactor
+    : toNumber(values.storage) + toNumber(values.station);
+}
+
+function normalizedItemName(name) {
+  return name
+    .replace(/[\s\-_/().（）]/g, "")
+    .replace(/蕃/g, "番")
+    .replace(/甘蔥/g, "乾蔥")
+    .replace(/\d+(?:\.\d+)?(?:KG|K|G|ML|L)/gi, "")
+    .toLocaleLowerCase("zh-Hant");
+}
+
+function summaryRows() {
+  const ambiguousCodes = new Set();
+  Object.values(STATIONS).forEach((station) => {
+    const seen = new Set();
+    station.items.forEach((item) => {
+      if (!item.code) return;
+      if (seen.has(item.code)) ambiguousCodes.add(item.code);
+      seen.add(item.code);
+    });
+  });
+
+  const rows = new Map();
+  Object.entries(STATIONS).forEach(([stationKey, station]) => {
+    const stationInventory = loadInventory(stationKey);
+    station.items.forEach((item) => {
+      const total = itemTotal(stationKey, item, stationInventory);
+      const normalizedName = normalizedItemName(item.name);
+      const key = item.code && !ambiguousCodes.has(item.code)
+        ? `code:${item.code}`
+        : `name:${normalizedName}|${item.unit}`;
+      if (!rows.has(key)) {
+        rows.set(key, {
+          name: item.name,
+          unit: item.unit || "—",
+          search: `${item.name} ${item.unit} ${item.code}`.toLocaleLowerCase("zh-Hant"),
+          stations: { cold: 0, s1: 0, s2: 0, pizza: 0 },
+        });
+      }
+      const row = rows.get(key);
+      row.stations[stationKey] += total;
+      row.search += ` ${item.name}`.toLocaleLowerCase("zh-Hant");
+    });
+  });
+  return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+}
+
+function setTableHead(isSummary) {
+  inventoryHeadRow.innerHTML = isSummary
+    ? `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">Cold</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">整店總庫存</th>`
+    : `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">儲位</th><th scope="col">站上</th><th scope="col">TOTAL</th>`;
+}
+
+function renderSummary() {
+  const fragment = document.createDocumentFragment();
+  summaryRows().forEach((item) => {
+    const row = document.createElement("tr");
+    row.dataset.search = item.search;
+    const nameCell = document.createElement("td");
+    nameCell.className = "item-name";
+    nameCell.textContent = item.name;
+    const unitCell = document.createElement("td");
+    unitCell.className = "unit";
+    unitCell.dataset.label = "單位";
+    unitCell.textContent = item.unit;
+    const stationCells = ["cold", "s1", "s2", "pizza"].map((station) => {
+      const cell = document.createElement("td");
+      cell.className = "summary-station-cell";
+      cell.dataset.label = STATIONS[station].label;
+      cell.textContent = formatNumber(item.stations[station]);
+      return cell;
+    });
+    const totalCell = document.createElement("td");
+    totalCell.className = "total-cell summary-total-cell";
+    totalCell.dataset.label = "整店總庫存";
+    totalCell.textContent = formatNumber(
+      Object.values(item.stations).reduce((sum, value) => sum + value, 0),
+    );
+    row.append(nameCell, unitCell, ...stationCells, totalCell);
+    fragment.append(row);
+  });
+  inventoryBody.replaceChildren(fragment);
+  filterItems();
+}
+
 function saveInventory() {
   localStorage.setItem(storageKey(activeStation), JSON.stringify(inventory));
   saveState.textContent = "已自動儲存";
@@ -962,6 +1056,10 @@ function updateTotal(order, target) {
 }
 
 function renderItems() {
+  if (activeStation === "summary") {
+    renderSummary();
+    return;
+  }
   const fragment = document.createDocumentFragment();
   STATIONS[activeStation].items.forEach((item) => fragment.append(createRow(item)));
   inventoryBody.replaceChildren(fragment);
@@ -978,9 +1076,12 @@ function filterItems() {
     if (matches) visible += 1;
   });
 
+  const totalItems = activeStation === "summary"
+    ? inventoryBody.querySelectorAll("tr").length
+    : STATIONS[activeStation].items.length;
   itemCount.textContent = query
-    ? `顯示 ${visible} / ${STATIONS[activeStation].items.length} 項`
-    : `共 ${STATIONS[activeStation].items.length} 項`;
+    ? `顯示 ${visible} / ${totalItems} 項`
+    : `共 ${totalItems} 項`;
   emptyState.hidden = visible !== 0;
 }
 
@@ -1019,19 +1120,22 @@ stationTabs.addEventListener("click", (event) => {
   if (!tab || tab.dataset.station === activeStation) return;
 
   activeStation = tab.dataset.station;
-  inventory = loadInventory(activeStation);
+  if (activeStation !== "summary") inventory = loadInventory(activeStation);
   searchInput.value = "";
   document.querySelectorAll(".station-tab").forEach((button) => {
     button.classList.toggle("active", button === tab);
   });
-  inventorySection.setAttribute(
-    "aria-label",
-    `101 ${STATIONS[activeStation].label} 週盤點`,
-  );
+  const isSummary = activeStation === "summary";
+  inventorySection.setAttribute("aria-label", isSummary
+    ? "101 各站周盤整店總表"
+    : `101 ${STATIONS[activeStation].label} 週盤點`);
+  prepSyncSection.hidden = isSummary;
+  setTableHead(isSummary);
   saveState.textContent = "已載入";
   renderItems();
 });
 
 renderItems();
+setTableHead(false);
 inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);

@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#173f35" />
     <title>Kitchen OS v4.1｜101 Weekly</title>
-    <link rel="stylesheet" href="weekly-v4/styles.css?v=20260802-2" />
+    <link rel="stylesheet" href="weekly-v4/styles.css?v=20260805-summary-v1" />
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-    <script src="weekly-v4/app.js?v=20260804-cold-tomato-v25" defer></script>
+    <script src="weekly-v4/app.js?v=20260805-summary-v1" defer></script>
   </head>
   <body>
     <header class="app-header">
@@ -30,6 +30,7 @@
         <button class="station-tab" type="button" data-station="s1">S1</button>
         <button class="station-tab" type="button" data-station="s2">S2</button>
         <button class="station-tab" type="button" data-station="pizza">Pizza</button>
+        <button class="station-tab summary-tab" type="button" data-station="summary">整店總表</button>
       </nav>
 
       <section class="toolbar" aria-label="盤點工具">
@@ -54,7 +55,7 @@
         <div class="table-scroll">
           <table>
             <thead>
-              <tr>
+              <tr id="inventoryHeadRow">
                 <th scope="col">品項</th>
                 <th scope="col">單位</th>
                 <th scope="col">儲位</th>

@@ -125,6 +125,10 @@ h1 {
   background: var(--forest-900);
 }
 
+.summary-tab {
+  min-width: 108px;
+}
+
 .station-tab:focus-visible {
   outline: 3px solid rgb(42 128 104 / 20%);
   outline-offset: 2px;
@@ -273,6 +277,16 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+}
+
+.summary-station-cell,
+.summary-total-cell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+body:has(.summary-tab.active) table {
+  min-width: 820px;
 }
 
 th,
