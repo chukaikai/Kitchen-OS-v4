@@ -375,6 +375,20 @@ tbody tr:hover .total-cell {
   background: var(--total);
 }
 
+.summary-category-row th {
+  background: #dfece7;
+  color: #173f35;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 11px 14px;
+  text-align: left;
+}
+
+.summary-category-row:hover th {
+  background: #dfece7;
+}
+
 .empty-state {
   padding: 48px 20px;
   color: var(--muted);

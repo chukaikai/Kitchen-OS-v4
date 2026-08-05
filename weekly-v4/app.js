@@ -756,6 +756,30 @@ function normalizedItemName(name) {
     .toLocaleLowerCase("zh-Hant");
 }
 
+const SUMMARY_STATION_ORDER = ["s1", "s2", "pizza", "cold"];
+const SUMMARY_CATEGORY_ORDER = ["冷凍", "冷藏", "乾貨"];
+
+function summaryCategory(station, order) {
+  if (station === "s1") {
+    if (order <= 27) return "冷凍";
+    if ((order >= 28 && order <= 41) || order >= 52) return "冷藏";
+    return "乾貨";
+  }
+  if (station === "s2") {
+    if (order <= 30) return "冷凍";
+    if ((order >= 31 && order <= 35) || order === 42) return "冷藏";
+    return "乾貨";
+  }
+  if (station === "pizza") {
+    if (order === 1) return "冷凍";
+    if (order <= 17) return "冷藏";
+    return "乾貨";
+  }
+  if (order <= 26) return "冷凍";
+  if ((order >= 27 && order <= 46) || order === 57 || order === 58 || order >= 70) return "冷藏";
+  return "乾貨";
+}
+
 function summaryRows() {
   const ambiguousCodes = new Set();
   Object.values(STATIONS).forEach((station) => {
@@ -768,9 +792,10 @@ function summaryRows() {
   });
 
   const rows = new Map();
-  Object.entries(STATIONS).forEach(([stationKey, station]) => {
+  SUMMARY_STATION_ORDER.forEach((stationKey, stationRank) => {
+    const station = STATIONS[stationKey];
     const stationInventory = loadInventory(stationKey);
-    station.items.forEach((item) => {
+    station.items.forEach((item, itemRank) => {
       const total = itemTotal(stationKey, item, stationInventory);
       const normalizedName = normalizedItemName(item.name);
       const key = item.code && !ambiguousCodes.has(item.code)
@@ -782,6 +807,9 @@ function summaryRows() {
           unit: item.unit || "—",
           search: `${item.name} ${item.unit} ${item.code}`.toLocaleLowerCase("zh-Hant"),
           stations: { cold: 0, s1: 0, s2: 0, pizza: 0 },
+          category: summaryCategory(stationKey, item.order),
+          stationRank,
+          itemRank,
         });
       }
       const row = rows.get(key);
@@ -789,18 +817,35 @@ function summaryRows() {
       row.search += ` ${item.name}`.toLocaleLowerCase("zh-Hant");
     });
   });
-  return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+  return [...rows.values()].sort((a, b) =>
+    SUMMARY_CATEGORY_ORDER.indexOf(a.category) - SUMMARY_CATEGORY_ORDER.indexOf(b.category) ||
+    a.stationRank - b.stationRank ||
+    a.itemRank - b.itemRank,
+  );
 }
 
 function setTableHead(isSummary) {
   inventoryHeadRow.innerHTML = isSummary
-    ? `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">Cold</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">整店總庫存</th>`
+    ? `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">Cold</th><th scope="col">整店總庫存</th>`
     : `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">儲位</th><th scope="col">站上</th><th scope="col">TOTAL</th>`;
 }
 
 function renderSummary() {
   const fragment = document.createDocumentFragment();
+  let currentCategory = "";
   summaryRows().forEach((item) => {
+    if (item.category !== currentCategory) {
+      currentCategory = item.category;
+      const categoryRow = document.createElement("tr");
+      categoryRow.className = "summary-category-row";
+      categoryRow.dataset.search = currentCategory.toLocaleLowerCase("zh-Hant");
+      const categoryCell = document.createElement("th");
+      categoryCell.colSpan = 7;
+      categoryCell.scope = "rowgroup";
+      categoryCell.textContent = currentCategory;
+      categoryRow.append(categoryCell);
+      fragment.append(categoryRow);
+    }
     const row = document.createElement("tr");
     row.dataset.search = item.search;
     const nameCell = document.createElement("td");
@@ -810,7 +855,7 @@ function renderSummary() {
     unitCell.className = "unit";
     unitCell.dataset.label = "單位";
     unitCell.textContent = item.unit;
-    const stationCells = ["cold", "s1", "s2", "pizza"].map((station) => {
+    const stationCells = SUMMARY_STATION_ORDER.map((station) => {
       const cell = document.createElement("td");
       cell.className = "summary-station-cell";
       cell.dataset.label = STATIONS[station].label;
@@ -1073,11 +1118,11 @@ function filterItems() {
   inventoryBody.querySelectorAll("tr").forEach((row) => {
     const matches = !query || row.dataset.search.includes(query);
     row.hidden = !matches;
-    if (matches) visible += 1;
+    if (matches && !row.classList.contains("summary-category-row")) visible += 1;
   });
 
   const totalItems = activeStation === "summary"
-    ? inventoryBody.querySelectorAll("tr").length
+    ? inventoryBody.querySelectorAll("tr:not(.summary-category-row)").length
     : STATIONS[activeStation].items.length;
   itemCount.textContent = query
     ? `顯示 ${visible} / ${totalItems} 項`

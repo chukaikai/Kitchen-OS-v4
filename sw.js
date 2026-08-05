@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly-store-summary-v27';
+const CACHE_NAME = 'kitchen-os-v41-weekly-store-summary-sort-v28';
 
 const ASSETS = [
   './',
