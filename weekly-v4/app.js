@@ -221,6 +221,10 @@ const STATIONS = {
   },
 };
 
+Object.keys(STATIONS).forEach((stationKey) => {
+  STATIONS[stationKey].items = KitchenItemSettings.apply("weekly", stationKey, STATIONS[stationKey].items);
+});
+
 const inventoryBody = document.querySelector("#inventoryBody");
 const searchInput = document.querySelector("#searchInput");
 const itemCount = document.querySelector("#itemCount");
@@ -233,6 +237,7 @@ const loadPrepButton = document.querySelector("#loadPrepButton");
 const prepSyncMessage = document.querySelector("#prepSyncMessage");
 const inventoryHeadRow = document.querySelector("#inventoryHeadRow");
 const prepSyncSection = document.querySelector(".prep-sync");
+const itemSettingsButton = document.querySelector("#itemSettingsButton");
 
 const firebaseConfig = {
   apiKey: "AIzaSyCFTPiF6H-mpu3-hiUFDZv0okkQxv9PH1g",
@@ -740,7 +745,9 @@ function formatNumber(value) {
 
 function itemTotal(station, item, stationInventory = loadInventory(station)) {
   const values = stationInventory[item.order] || {};
-  const conversion = WEEKLY_CONVERSIONS[station]?.[item.order];
+  const conversion = item.customPackGrams
+    ? { storageFactor: 1, stationFactor: 1 / item.customPackGrams }
+    : WEEKLY_CONVERSIONS[station]?.[item.order];
   return conversion
     ? toNumber(values.storage) * conversion.storageFactor +
         toNumber(values.station) * conversion.stationFactor
@@ -1090,7 +1097,10 @@ function createRow(item) {
 
 function updateTotal(order, target) {
   const values = inventory[order] || {};
-  const conversion = WEEKLY_CONVERSIONS[activeStation]?.[order];
+  const item = STATIONS[activeStation]?.items.find((entry) => String(entry.order) === String(order));
+  const conversion = item?.customPackGrams
+    ? { storageFactor: 1, stationFactor: 1 / item.customPackGrams }
+    : WEEKLY_CONVERSIONS[activeStation]?.[order];
   const total = conversion
     ? toNumber(values.storage) * conversion.storageFactor +
       toNumber(values.station) * conversion.stationFactor
@@ -1184,3 +1194,7 @@ renderItems();
 setTableHead(false);
 inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);
+itemSettingsButton.addEventListener("click", () => {
+  if (activeStation === "summary") return alert("請先選擇 S1、S2、Pizza 或 Cold。");
+  KitchenItemSettings.openManager("weekly", activeStation, STATIONS[activeStation].items, () => location.reload());
+});

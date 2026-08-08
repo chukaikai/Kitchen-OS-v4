@@ -1,9 +1,12 @@
-const CACHE_NAME = 'kitchen-os-v41-total-front-v1';
+const CACHE_NAME = 'kitchen-os-v41-item-settings-v1';
 
 const ASSETS = [
   './',
   './index.html',
   './store-context.js',
+  './item-settings.js',
+  './item-settings.html',
+  './daily-settings-runtime.js',
   './weekly.html',
   './weekly-app.html',
   './weekly-v4/styles.css',
