@@ -826,7 +826,7 @@ function summaryRows() {
 
 function setTableHead(isSummary) {
   inventoryHeadRow.innerHTML = isSummary
-    ? `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">Cold</th><th scope="col">整店總庫存</th>`
+    ? `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">整店總庫存</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">Cold</th>`
     : `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">儲位</th><th scope="col">站上</th><th scope="col">TOTAL</th>`;
 }
 
@@ -868,7 +868,7 @@ function renderSummary() {
     totalCell.textContent = formatNumber(
       Object.values(item.stations).reduce((sum, value) => sum + value, 0),
     );
-    row.append(nameCell, unitCell, ...stationCells, totalCell);
+    row.append(nameCell, unitCell, totalCell, ...stationCells);
     fragment.append(row);
   });
   inventoryBody.replaceChildren(fragment);

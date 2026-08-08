@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-multistore-v1';
+const CACHE_NAME = 'kitchen-os-v41-total-front-v1';
 
 const ASSETS = [
   './',

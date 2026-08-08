@@ -289,6 +289,14 @@ body:has(.summary-tab.active) table {
   min-width: 820px;
 }
 
+body:has(.summary-tab.active) th:nth-child(1) { width: 34%; }
+body:has(.summary-tab.active) th:nth-child(2) { width: 12%; }
+body:has(.summary-tab.active) th:nth-child(3) { width: 16%; }
+body:has(.summary-tab.active) th:nth-child(4),
+body:has(.summary-tab.active) th:nth-child(5),
+body:has(.summary-tab.active) th:nth-child(6),
+body:has(.summary-tab.active) th:nth-child(7) { width: 9.5%; }
+
 th,
 td {
   border-bottom: 1px solid var(--line);
