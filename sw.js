@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-dome-weekly-v3';
+const CACHE_NAME = 'kitchen-os-v41-dome-s1-v1';
 
 const ASSETS = [
   './',

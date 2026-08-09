@@ -225,6 +225,22 @@ const LEGACY_STATION_ITEMS = Object.fromEntries(
   Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
 );
 window.KitchenStoreDefaults?.applyWeekly(STATIONS);
+if (KitchenStore.current?.id === "taipei-dome") {
+  const s1Items = STATIONS.s1.items;
+  const eggWhole = s1Items.find((item) => item.order === 52);
+  const eggWhite = s1Items.find((item) => item.order === 53);
+  if (eggWhole) Object.assign(eggWhole, { code: "183015SS", name: "殺菌全蛋液 970G/CAN", unit: "Can / 罐" });
+  if (eggWhite) Object.assign(eggWhite, { code: "183017SS", name: "殺菌蛋白液 970G/CAN", unit: "Can / 罐" });
+  if (!s1Items.some((item) => item.code === "161004SS")) {
+    s1Items.push({
+      order: Math.max(...s1Items.map((item) => Number(item.order) || 0)) + 1,
+      code: "161004SS",
+      name: "料理白酒 5L/BOT",
+      unit: "Btl / 瓶",
+      location: "乾貨",
+    });
+  }
+}
 const BASE_STATION_ITEMS = Object.fromEntries(
   Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
 );
@@ -751,6 +767,29 @@ if (KitchenStore.current?.id === "taipei-dome") {
       if (newOrder != null) rule.order = newOrder;
     });
   });
+
+  // 大巨蛋 S1 已逐項確認的備料回推規則。備料表盤實際數量，
+  // Weekly 站上欄則統一保存成周盤原包裝／原料主單位。
+  // 大巨蛋 S1 原始備料表列序（0 起算）；炒菇調味汁由本版附加在第 27 列。
+  const cookedMushroom = 0;
+  const ribeye = 15;
+  const potato = 16;
+  const lamb = 17;
+  const mushroomSauce = 26;
+  PREP_TO_WEEKLY.s1 = [
+    { targetCode: "142016SS", targetName: "香菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
+    { targetCode: "142015SS", targetName: "蘑菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
+    { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
+    { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
+    { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
+    { targetCode: "142013SS", targetName: "白皮洋芋", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
+    { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
+    { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
+    { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
+  ].filter((rule) => rule.sources.every(([index]) => index >= 0));
+
+  WEEKLY_CONVERSIONS.s1[52] = { storageFactor: 1, stationFactor: 1 / 970, storageUnit: "罐", stationUnit: "g", note: "站上盤重量；970g＝1罐" };
+  WEEKLY_CONVERSIONS.s1[53] = { storageFactor: 1, stationFactor: 1 / 970, storageUnit: "罐", stationUnit: "g", note: "站上盤重量；970g＝1罐" };
 }
 
 let activeStation = "cold";
@@ -1021,6 +1060,7 @@ async function loadPrepInventory() {
       delete stationInventory[41].prepDate;
       delete stationInventory[41].prepNote;
     }
+    const convertedByTarget = new Map();
     rules.forEach((rule) => {
       let hasValue = false;
       const converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
@@ -1030,11 +1070,10 @@ async function loadPrepInventory() {
       }, 0);
       if (!hasValue) return;
       const targetOrder = resolveTargetOrder(station, rule);
-      stationInventory[targetOrder] ||= {};
-      stationInventory[targetOrder].station = formatNumber(converted);
-      stationInventory[targetOrder].prepLinked = true;
-      stationInventory[targetOrder].prepDate = date;
-      stationInventory[targetOrder].prepNote = rule.note || `由 ${date} 備料盤點換算`;
+      const entry = convertedByTarget.get(targetOrder) || { value: 0, notes: [] };
+      entry.value += converted;
+      if (rule.note) entry.notes.push(rule.note);
+      convertedByTarget.set(targetOrder, entry);
       if (station === "s2" && rule.targetCode === "142004SS") {
         s2ShallotValue = formatNumber(converted);
       }
@@ -1042,6 +1081,19 @@ async function loadPrepInventory() {
         coldTruffleValue = formatNumber(converted);
       }
       linked += 1;
+    });
+    convertedByTarget.forEach((entry, targetOrder) => {
+      stationInventory[targetOrder] ||= {};
+      const current = stationInventory[targetOrder];
+      const manualStation = current.prepLinked
+        ? toNumber(current.manualStation)
+        : toNumber(current.station);
+      current.manualStation = formatNumber(manualStation);
+      current.prepValue = formatNumber(entry.value);
+      current.station = formatNumber(manualStation + entry.value);
+      current.prepLinked = true;
+      current.prepDate = date;
+      current.prepNote = entry.notes.join("；") || `由 ${date} 備料盤點換算`;
     });
 
     // 醃綜合蕃茄固定拆料：直接用品項代碼定位兩種鮮蕃茄，避免名稱中的
