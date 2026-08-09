@@ -768,6 +768,40 @@ if (KitchenStore.current?.id === "taipei-dome") {
     });
   });
 
+  // 大巨蛋指定品項：Weekly 站上統一盤重量 g，再換算成原包裝／kg。
+  // 以品項代碼定位，不依賴列號，避免分站或排序調整後套錯換算。
+  const domeStationWeightConversions = {
+    CKC000004: { grams: 300, storageUnit: "袋", note: "1袋＝300g" },
+    "163011CK": { grams: 2760, storageUnit: "瓶", note: "3L橄欖油按淨重2760g＝1瓶" },
+    "163006CK": { grams: 250, storageUnit: "瓶", note: "1瓶＝250g" },
+    "164009SS": { grams: 400, storageUnit: "罐", note: "1罐＝400g" },
+    "164005SS": { grams: 920, storageUnit: "瓶", note: "1瓶＝920g" },
+    "162028SS": { grams: 1400, storageUnit: "罐", note: "1罐＝1400g" },
+    "162037SS": { grams: 600, storageUnit: "包", note: "1包＝600g" },
+    "181003SS": { grams: 1000, storageUnit: "kg", note: "1000g＝1kg" },
+    "145002SS": { grams: 1000, storageUnit: "kg", note: "1000g＝1kg" },
+    "145014SS": { grams: 25, storageUnit: "盒", note: "1盒＝25g" },
+    "144013SS": { grams: 1000, storageUnit: "kg", note: "1000g＝1kg" },
+    "145008SS": { grams: 1000, storageUnit: "kg", note: "1000g＝1kg" },
+    CKC000025: { grams: 1000, storageUnit: "袋", note: "1袋＝1000g" },
+  };
+  Object.entries(STATIONS).forEach(([station, stationConfig]) => {
+    stationConfig.items.forEach((item) => {
+      if (item.code === "142013SS") item.name = "白皮馬鈴薯/公斤";
+      if (item.code === "CKC000004" && !item.name.includes("巴西里油")) return;
+      const config = domeStationWeightConversions[item.code];
+      if (!config) return;
+      WEEKLY_CONVERSIONS[station] ||= {};
+      WEEKLY_CONVERSIONS[station][item.order] = {
+        storageFactor: 1,
+        stationFactor: 1 / config.grams,
+        storageUnit: config.storageUnit,
+        stationUnit: "g",
+        note: `站上盤重量；${config.note}`,
+      };
+    });
+  });
+
   // 大巨蛋 S1 已逐項確認的備料回推規則。備料表盤實際數量，
   // Weekly 站上欄則統一保存成周盤原包裝／原料主單位。
   // 大巨蛋 S1 原始備料表列序（0 起算）；炒菇調味汁由本版附加在第 27 列。
@@ -782,7 +816,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
     { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
-    { targetCode: "142013SS", targetName: "白皮洋芋", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
+    { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
     { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
     { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
     { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
