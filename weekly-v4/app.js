@@ -221,8 +221,16 @@ const STATIONS = {
   },
 };
 
+const LEGACY_STATION_ITEMS = Object.fromEntries(
+  Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
+);
+window.KitchenStoreDefaults?.applyWeekly(STATIONS);
+const BASE_STATION_ITEMS = Object.fromEntries(
+  Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
+);
+
 Object.keys(STATIONS).forEach((stationKey) => {
-  STATIONS[stationKey].items = KitchenItemSettings.apply("weekly", stationKey, STATIONS[stationKey].items);
+  STATIONS[stationKey].items = KitchenItemSettings.apply("weekly", stationKey, BASE_STATION_ITEMS[stationKey]);
 });
 
 const inventoryBody = document.querySelector("#inventoryBody");
@@ -715,6 +723,36 @@ const WEEKLY_CONVERSIONS = {
   },
 };
 
+// 大巨蛋的周盤順序來自店內冷凍／冷藏／乾貨母表。既有換算規則
+// 用品項代碼（無代碼時用品名）重新定位，避免沿用 101 的列號而套錯品項。
+if (KitchenStore.current?.id === "taipei-dome") {
+  const normalizeItemName = (value) => String(value || "").toLowerCase().replace(/[\s\-_.\/()（）*×]/g, "").replace(/蕃/g, "番");
+  const locateNewOrder = (station, oldOrder) => {
+    const source = LEGACY_STATION_ITEMS[station]?.find((item) => String(item.order) === String(oldOrder));
+    if (!source) return null;
+    const match = STATIONS[station]?.items.find((item) =>
+      (source.code && item.code && source.code === item.code) ||
+      normalizeItemName(source.name) === normalizeItemName(item.name)
+    );
+    return match?.order ?? null;
+  };
+  Object.keys(WEEKLY_CONVERSIONS).forEach((station) => {
+    const remapped = {};
+    Object.entries(WEEKLY_CONVERSIONS[station]).forEach(([oldOrder, config]) => {
+      const newOrder = locateNewOrder(station, oldOrder);
+      if (newOrder != null) remapped[newOrder] = config;
+    });
+    WEEKLY_CONVERSIONS[station] = remapped;
+  });
+  Object.entries(PREP_TO_WEEKLY).forEach(([station, rules]) => {
+    rules.forEach((rule) => {
+      if (rule.targetCode || rule.targetName) return;
+      const newOrder = locateNewOrder(station, rule.order);
+      if (newOrder != null) rule.order = newOrder;
+    });
+  });
+}
+
 let activeStation = "cold";
 let inventory = loadInventory(activeStation);
 let saveTimer;
@@ -766,7 +804,9 @@ function normalizedItemName(name) {
 const SUMMARY_STATION_ORDER = ["s1", "s2", "pizza", "cold"];
 const SUMMARY_CATEGORY_ORDER = ["冷凍", "冷藏", "乾貨"];
 
-function summaryCategory(station, order) {
+function summaryCategory(station, item) {
+  if (SUMMARY_CATEGORY_ORDER.includes(item?.location)) return item.location;
+  const order = item?.order;
   if (station === "s1") {
     if (order <= 27) return "冷凍";
     if ((order >= 28 && order <= 41) || order >= 52) return "冷藏";
@@ -814,7 +854,7 @@ function summaryRows() {
           unit: item.unit || "—",
           search: `${item.name} ${item.unit} ${item.code}`.toLocaleLowerCase("zh-Hant"),
           stations: { cold: 0, s1: 0, s2: 0, pizza: 0 },
-          category: summaryCategory(stationKey, item.order),
+          category: summaryCategory(stationKey, item),
           stationRank,
           itemRank,
         });
@@ -1196,5 +1236,5 @@ inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);
 itemSettingsButton.addEventListener("click", () => {
   if (activeStation === "summary") return alert("請先選擇 S1、S2、Pizza 或 Cold。");
-  KitchenItemSettings.openManager("weekly", activeStation, STATIONS[activeStation].items, () => location.reload());
+  KitchenItemSettings.openManager("weekly", activeStation, BASE_STATION_ITEMS[activeStation], () => location.reload());
 });

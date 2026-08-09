@@ -1,7 +1,7 @@
 (function(){
   "use strict";
   const KEY="kitchen-os:item-settings:v1";
-  const TYPES=["weekly","central"];
+  const TYPES=["weekly","central","prep"];
   const STATIONS=["s1","s2","pizza","cold"];
   function read(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){return {}}}
   function write(data){localStorage.setItem(KEY,JSON.stringify(data))}
@@ -10,7 +10,7 @@
   function set(type,station,value){const all=read();all[key(type,station)]=value;write(all)}
   function idFor(type,item,index){
     if(type==="weekly") return item._customId||("base:"+(item.code||"")+":"+item.order+":"+item.name);
-    return item[6]||("base:"+(item[5]||index+1)+":"+item[0]);
+    return item._customId||item[6]||("base:"+(item[5]||index+1)+":"+item[0]+":"+(item[1]||""));
   }
   function apply(type,station,base){
     const cfg=get(type,station), hidden=new Set(cfg.hidden||[]), byId=new Map();
@@ -33,4 +33,5 @@
     shade.querySelector('[data-close]').onclick=()=>shade.remove();shade.querySelector('[data-reset]').onclick=()=>{ids=[...all.keys()];hidden.clear();draw()};shade.querySelector('[data-save]').onclick=()=>{cfg.order=ids;cfg.hidden=[...hidden];set(type,station,cfg);shade.remove();onDone&&onDone()};document.body.append(shade);draw();
   }
   window.KitchenItemSettings={KEY,TYPES,STATIONS,read,write,get,set,idFor,apply,openManager};
+  document.addEventListener("DOMContentLoaded",()=>{const select=document.getElementById("type");if(select&&!select.querySelector('option[value="prep"]')){const option=document.createElement("option");option.value="prep";option.textContent="備料盤點表";select.append(option)}});
 })();
