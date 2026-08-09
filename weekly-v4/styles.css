@@ -129,6 +129,12 @@ h1 {
   min-width: 108px;
 }
 
+.produce-tab {
+  min-width: 108px;
+  border-color: #b9d6c9;
+  background: #edf6f1;
+}
+
 .station-tab:focus-visible {
   outline: 3px solid rgb(42 128 104 / 20%);
   outline-offset: 2px;
@@ -286,7 +292,7 @@ table {
 }
 
 body:has(.summary-tab.active) table {
-  min-width: 820px;
+  min-width: 900px;
 }
 
 body:has(.summary-tab.active) th:nth-child(1) { width: 34%; }
@@ -295,7 +301,19 @@ body:has(.summary-tab.active) th:nth-child(3) { width: 16%; }
 body:has(.summary-tab.active) th:nth-child(4),
 body:has(.summary-tab.active) th:nth-child(5),
 body:has(.summary-tab.active) th:nth-child(6),
-body:has(.summary-tab.active) th:nth-child(7) { width: 9.5%; }
+body:has(.summary-tab.active) th:nth-child(7),
+body:has(.summary-tab.active) th:nth-child(8) { width: 8.5%; }
+
+body:has(.produce-tab.active) th:nth-child(1) { width: 42%; }
+body:has(.produce-tab.active) th:nth-child(2) { width: 16%; }
+body:has(.produce-tab.active) th:nth-child(3),
+body:has(.produce-tab.active) th:nth-child(4),
+body:has(.produce-tab.active) th:nth-child(5) { width: 14%; }
+
+.produce-prep-cell {
+  color: #53605a;
+  background: #f5f7f5;
+}
 
 th,
 td {
@@ -537,3 +555,23 @@ tbody tr:hover .total-cell {
 /* Multi-store context */
 .store-context-bar{position:sticky;top:0;z-index:1000;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 16px;background:#172554;color:#fff;font-size:14px;box-shadow:0 2px 8px #0002}.store-context-bar button{border:1px solid #ffffff66;border-radius:999px;background:#fff;color:#172554;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}
 .settings-button{border:1px solid #285842;border-radius:10px;background:#fff;color:#285842;padding:9px 12px;font:inherit;font-weight:750;text-decoration:none;white-space:nowrap;cursor:pointer}
+
+.produce-storage-managed {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .produce-storage-managed {
+    display: flex;
+    min-height: 50px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    background: rgb(40 88 66 / 4%);
+  }
+}

@@ -221,6 +221,54 @@ const STATIONS = {
   },
 };
 
+// 大巨蛋下午由主管統一盤點冷藏儲位的蔬菜。四個站別仍保留品項列與
+// 站上盤點；只有儲位改由下午蔬菜表統一盤，避免重複計算。
+const AFTERNOON_PRODUCE_ITEMS = makeItems([
+  ["168021SS", "大漢板豆腐/400克/盒", "Box / 盒"],
+  ["142019SS", "蒜仁-大 /公斤", "Kg / 公斤"],
+  ["142004SS", "甘蔥(紅蔥頭)/公斤", "Kg / 公斤"],
+  ["142001SS", "紅辣椒/公斤", "Kg / 公斤"],
+  ["142012SS", "小黃瓜/公斤", "Kg / 公斤"],
+  ["181005SS", "紅椒/公斤", "Kg / 公斤"],
+  ["141001SS", "牛蕃茄 Tomato(大牛)/公斤", "Kg / 公斤"],
+  ["142006SS", "紫洋蔥/公斤", "Kg / 公斤"],
+  ["142030SS", "球芽甘藍/公斤", "Kg / 公斤"],
+  ["142028SS", "青花菜/公斤", "Kg / 公斤"],
+  ["142029SS", "秋葵/公斤", "Kg / 公斤"],
+  ["142009SS", "西芹/公斤", "Kg / 公斤"],
+  ["142015SS", "蘑菇/公斤", "Kg / 公斤"],
+  ["142016SS", "濕香菇/中/5公分/公斤", "Kg / 公斤"],
+  ["142017SS", "鴻禧菇/盒", "Box / 盒"],
+  ["181002SS", "九層塔/公斤", "Kg / 公斤"],
+  ["145015SS", "特規甜蘿勒/公斤", "Kg / 公斤"],
+  ["145002SS", "蒔蘿/公斤", "Kg / 公斤"],
+  ["145003SS", "薄荷/公斤", "Kg / 公斤"],
+  ["145001SS", "蝦夷蔥/公斤", "Kg / 公斤"],
+  ["181003SS", "平葉巴西里/公斤", "Kg / 公斤"],
+  ["145004SS", "捲葉巴西里/公斤", "Kg / 公斤"],
+  ["145006SS", "百里香/公斤", "Kg / 公斤"],
+  ["181004SS", "迷迭香/公斤", "Kg / 公斤"],
+  ["145008SS", "檸檬葉/公斤", "Kg / 公斤"],
+  ["145009SS", "香菜/公斤", "Kg / 公斤"],
+  ["143001SS", "奶油萵苣/公斤", "Kg / 公斤"],
+  ["142014SS", "菠菜/公斤", "Kg / 公斤"],
+  ["142010SS", "美生菜/公斤", "Kg / 公斤"],
+  ["142020SS", "羽衣甘藍/ KG", "Kg / 公斤"],
+  ["144011SS", "聖女蕃茄（中）/公斤", "Kg / 公斤"],
+  ["142013SS", "白皮馬鈴薯/公斤", "Kg / 公斤"],
+  ["142003SS", "青蔥/公斤", "Kg / 公斤"],
+  ["142002SS", "青辣椒/公斤", "Kg / 公斤"],
+  ["142041SS", "裂葉芝麻葉/500G/包", "Bag / 袋"],
+  ["142037SS", "白花椰/公斤", "Kg / 公斤"],
+  ["142018SS", "圓茄/公斤", "Kg / 公斤"],
+]);
+const AFTERNOON_PRODUCE_CODES = new Set(AFTERNOON_PRODUCE_ITEMS.map((item) => item.code));
+const produceEnabled = KitchenStore.current?.id === "taipei-dome";
+
+function isAfternoonProduce(item) {
+  return produceEnabled && AFTERNOON_PRODUCE_CODES.has(item?.code);
+}
+
 const LEGACY_STATION_ITEMS = Object.fromEntries(
   Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
 );
@@ -262,6 +310,8 @@ const prepSyncMessage = document.querySelector("#prepSyncMessage");
 const inventoryHeadRow = document.querySelector("#inventoryHeadRow");
 const prepSyncSection = document.querySelector(".prep-sync");
 const itemSettingsButton = document.querySelector("#itemSettingsButton");
+const produceTab = document.querySelector(".produce-tab");
+if (!produceEnabled && produceTab) produceTab.remove();
 
 const firebaseConfig = {
   apiKey: "AIzaSyCFTPiF6H-mpu3-hiUFDZv0okkQxv9PH1g",
@@ -884,6 +934,32 @@ function itemTotal(station, item, stationInventory = loadInventory(station)) {
     : toNumber(values.storage) + toNumber(values.station);
 }
 
+function stationOnlyTotal(station, item, stationInventory = loadInventory(station)) {
+  const values = stationInventory[item.order] || {};
+  const conversion = item?.customPackGrams
+    ? { stationFactor: 1 / item.customPackGrams }
+    : WEEKLY_CONVERSIONS[station]?.[item.order];
+  return toNumber(values.station) * (conversion?.stationFactor ?? 1);
+}
+
+function producePrepTotal(item) {
+  return SUMMARY_STATION_ORDER.reduce((sum, station) => {
+    const matching = STATIONS[station].items.filter((entry) => entry.code === item.code);
+    const stationInventory = loadInventory(station);
+    return sum + matching.reduce((stationSum, entry) => {
+      const values = stationInventory[entry.order] || {};
+      if (!values.prepLinked) return stationSum;
+      // prepValue 已由 PREP_TO_WEEKLY 換算成品項主單位（kg／盒／袋），
+      // 不可再套用站上人工盤 g 的換算倍率，否則會被重複除以 1000。
+      return stationSum + toNumber(values.prepValue);
+    }, 0);
+  }, 0);
+}
+
+function produceManualValue(item, produceInventory = loadInventory("produce")) {
+  return toNumber(produceInventory[item.order]?.quantity);
+}
+
 function normalizedItemName(name) {
   return name
     .replace(/[\s\-_/().（）]/g, "")
@@ -935,9 +1011,14 @@ function summaryRows() {
     const station = STATIONS[stationKey];
     const stationInventory = loadInventory(stationKey);
     station.items.forEach((item, itemRank) => {
-      const total = itemTotal(stationKey, item, stationInventory);
+      const afternoonProduce = isAfternoonProduce(item);
+      const total = afternoonProduce
+        ? stationOnlyTotal(stationKey, item, stationInventory)
+        : itemTotal(stationKey, item, stationInventory);
       const normalizedName = normalizedItemName(item.name);
-      const key = item.code && !ambiguousCodes.has(item.code)
+      const key = afternoonProduce && item.code
+        ? `code:${item.code}`
+        : item.code && !ambiguousCodes.has(item.code)
         ? `code:${item.code}`
         : `name:${normalizedName}|${item.unit}`;
       if (!rows.has(key)) {
@@ -945,7 +1026,7 @@ function summaryRows() {
           name: item.name,
           unit: item.unit || "—",
           search: `${item.name} ${item.unit} ${item.code}`.toLocaleLowerCase("zh-Hant"),
-          stations: { cold: 0, s1: 0, s2: 0, pizza: 0 },
+          stations: { cold: 0, s1: 0, s2: 0, pizza: 0, produce: 0 },
           category: summaryCategory(stationKey, item),
           stationRank,
           itemRank,
@@ -956,6 +1037,27 @@ function summaryRows() {
       row.search += ` ${item.name}`.toLocaleLowerCase("zh-Hant");
     });
   });
+  if (produceEnabled) {
+    const produceInventory = loadInventory("produce");
+    AFTERNOON_PRODUCE_ITEMS.forEach((item, itemRank) => {
+      const key = `code:${item.code}`;
+      const row = rows.get(key) || {
+        name: item.name,
+        unit: item.unit,
+        search: `${item.name} ${item.unit} ${item.code}`.toLocaleLowerCase("zh-Hant"),
+        stations: { cold: 0, s1: 0, s2: 0, pizza: 0, produce: 0 },
+        category: "冷藏",
+        stationRank: -1,
+        itemRank,
+      };
+      // 下午蔬菜欄只放主管盤的冷藏儲位；各站人工站上與備料回推
+      // 已包含在各站欄位，這裡不可再加 producePrepTotal，避免重複。
+      row.stations.produce = produceManualValue(item, produceInventory);
+      row.category = "冷藏";
+      row.itemRank = itemRank;
+      rows.set(key, row);
+    });
+  }
   return [...rows.values()].sort((a, b) =>
     SUMMARY_CATEGORY_ORDER.indexOf(a.category) - SUMMARY_CATEGORY_ORDER.indexOf(b.category) ||
     a.stationRank - b.stationRank ||
@@ -963,10 +1065,18 @@ function summaryRows() {
   );
 }
 
-function setTableHead(isSummary) {
-  inventoryHeadRow.innerHTML = isSummary
-    ? `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">整店總庫存</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">Cold</th>`
-    : `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">儲位</th><th scope="col">站上</th><th scope="col">TOTAL</th>`;
+function setTableHead(mode) {
+  if (mode === "summary") {
+    inventoryHeadRow.innerHTML = produceEnabled
+      ? `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">整店總庫存</th><th scope="col">下午蔬菜</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">Cold</th>`
+      : `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">整店總庫存</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Pizza</th><th scope="col">Cold</th>`;
+    return;
+  }
+  if (mode === "produce") {
+    inventoryHeadRow.innerHTML = `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">下午實盤</th><th scope="col">備料回推</th><th scope="col">整店總量</th>`;
+    return;
+  }
+  inventoryHeadRow.innerHTML = `<th scope="col">品項</th><th scope="col">單位</th><th scope="col">儲位</th><th scope="col">站上</th><th scope="col">TOTAL</th>`;
 }
 
 function renderSummary() {
@@ -979,7 +1089,7 @@ function renderSummary() {
       categoryRow.className = "summary-category-row";
       categoryRow.dataset.search = currentCategory.toLocaleLowerCase("zh-Hant");
       const categoryCell = document.createElement("th");
-      categoryCell.colSpan = 7;
+      categoryCell.colSpan = produceEnabled ? 8 : 7;
       categoryCell.scope = "rowgroup";
       categoryCell.textContent = currentCategory;
       categoryRow.append(categoryCell);
@@ -994,10 +1104,11 @@ function renderSummary() {
     unitCell.className = "unit";
     unitCell.dataset.label = "單位";
     unitCell.textContent = item.unit;
-    const stationCells = SUMMARY_STATION_ORDER.map((station) => {
+    const summarySources = produceEnabled ? ["produce", ...SUMMARY_STATION_ORDER] : SUMMARY_STATION_ORDER;
+    const stationCells = summarySources.map((station) => {
       const cell = document.createElement("td");
       cell.className = "summary-station-cell";
-      cell.dataset.label = STATIONS[station].label;
+      cell.dataset.label = station === "produce" ? "下午蔬菜" : STATIONS[station].label;
       cell.textContent = formatNumber(item.stations[station]);
       return cell;
     });
@@ -1008,6 +1119,56 @@ function renderSummary() {
       Object.values(item.stations).reduce((sum, value) => sum + value, 0),
     );
     row.append(nameCell, unitCell, totalCell, ...stationCells);
+    fragment.append(row);
+  });
+  inventoryBody.replaceChildren(fragment);
+  filterItems();
+}
+
+function renderProduce() {
+  const fragment = document.createDocumentFragment();
+  AFTERNOON_PRODUCE_ITEMS.forEach((item) => {
+    const prepValue = producePrepTotal(item);
+    const manualValue = produceManualValue(item, inventory);
+    const row = document.createElement("tr");
+    row.dataset.search = `${item.name} ${item.unit}`.toLocaleLowerCase("zh-Hant");
+
+    const nameCell = document.createElement("td");
+    nameCell.className = "item-name";
+    nameCell.textContent = item.name;
+
+    const unitCell = document.createElement("td");
+    unitCell.className = "unit";
+    unitCell.dataset.label = "單位";
+    unitCell.textContent = item.unit;
+
+    const inputCell = document.createElement("td");
+    inputCell.className = "inventory-field produce-manual-cell";
+    inputCell.dataset.label = "下午實盤";
+    const input = document.createElement("input");
+    input.className = "number-input produce-input";
+    input.type = "number";
+    input.inputMode = "decimal";
+    input.min = "0";
+    input.step = "any";
+    input.placeholder = "0";
+    input.value = inventory[item.order]?.quantity ?? "";
+    input.dataset.produceOrder = String(item.order);
+    input.setAttribute("aria-label", `${item.name} 下午實盤（${item.unit}）`);
+    inputCell.append(input);
+
+    const prepCell = document.createElement("td");
+    prepCell.className = "total-cell produce-prep-cell";
+    prepCell.dataset.label = "備料回推";
+    prepCell.textContent = formatNumber(prepValue);
+
+    const totalCell = document.createElement("td");
+    totalCell.className = "total-cell produce-total-cell";
+    totalCell.dataset.label = "整店總量";
+    totalCell.dataset.produceTotalFor = String(item.order);
+    totalCell.textContent = formatNumber(manualValue + prepValue);
+
+    row.append(nameCell, unitCell, inputCell, prepCell, totalCell);
     fragment.append(row);
   });
   inventoryBody.replaceChildren(fragment);
@@ -1108,7 +1269,7 @@ async function loadPrepInventory() {
     });
   }
 
-  function addPrepValue(stationInventory, targetOrder, value, note) {
+  function addPrepValue(station, stationInventory, targetOrder, value, note) {
     stationInventory[targetOrder] ||= {};
     const current = stationInventory[targetOrder];
     const manualStation = current.prepLinked
@@ -1116,7 +1277,14 @@ async function loadPrepInventory() {
       : toNumber(current.station);
     current.manualStation = formatNumber(manualStation);
     current.prepValue = formatNumber(value);
-    current.station = formatNumber(manualStation + value);
+    const targetItem = STATIONS[station]?.items.find((item) => String(item.order) === String(targetOrder));
+    const conversion = targetItem?.customPackGrams
+      ? { stationFactor: 1 / targetItem.customPackGrams }
+      : WEEKLY_CONVERSIONS[station]?.[targetOrder];
+    const prepInStationInputUnit = conversion?.stationFactor
+      ? value / conversion.stationFactor
+      : value;
+    current.station = formatNumber(manualStation + prepInStationInputUnit);
     current.prepLinked = true;
     current.prepDate = date;
     current.prepNote = note || `由 ${date} 備料盤點換算`;
@@ -1167,6 +1335,7 @@ async function loadPrepInventory() {
     });
     convertedByTarget.forEach((entry, targetOrder) => {
       addPrepValue(
+        station,
         stationInventory,
         targetOrder,
         entry.value,
@@ -1196,6 +1365,7 @@ async function loadPrepInventory() {
             stationInventory[target.order].prepNote = `醃綜合蕃茄：每盒回推${name} 1kg`;
           } else {
             addPrepValue(
+              station,
               stationInventory,
               target.order,
               tomatoKg,
@@ -1241,13 +1411,16 @@ function createRow(item) {
   const storageCell = document.createElement("td");
   storageCell.className = "inventory-field storage-field";
   storageCell.dataset.label = "儲位";
-  if (conversion?.storageUnit) {
+  if (isAfternoonProduce(item)) {
+    storageCell.classList.add("produce-storage-managed");
+    storageCell.textContent = "下午蔬菜統一盤";
+  } else if (conversion?.storageUnit) {
     const storageUnit = document.createElement("span");
     storageUnit.className = "inventory-unit-label";
     storageUnit.textContent = `盤${conversion.storageUnit}`;
     storageCell.append(storageUnit);
   }
-  storageCell.append(createNumberInput(item, "storage"));
+  if (!isAfternoonProduce(item)) storageCell.append(createNumberInput(item, "storage"));
 
   const stationCell = document.createElement("td");
   stationCell.className = "inventory-field station-field";
@@ -1277,10 +1450,12 @@ function updateTotal(order, target) {
   const conversion = item?.customPackGrams
     ? { storageFactor: 1, stationFactor: 1 / item.customPackGrams }
     : WEEKLY_CONVERSIONS[activeStation]?.[order];
-  const total = conversion
-    ? toNumber(values.storage) * conversion.storageFactor +
-      toNumber(values.station) * conversion.stationFactor
-    : toNumber(values.storage) + toNumber(values.station);
+  const total = isAfternoonProduce(item)
+    ? toNumber(values.station) * (conversion?.stationFactor ?? 1)
+    : conversion
+      ? toNumber(values.storage) * conversion.storageFactor +
+        toNumber(values.station) * conversion.stationFactor
+      : toNumber(values.storage) + toNumber(values.station);
   const cell =
     target || document.querySelector(`[data-total-for="${order}"]`);
   if (cell) cell.textContent = formatNumber(total);
@@ -1291,8 +1466,13 @@ function renderItems() {
     renderSummary();
     return;
   }
+  if (activeStation === "produce") {
+    renderProduce();
+    return;
+  }
   const fragment = document.createDocumentFragment();
-  STATIONS[activeStation].items.forEach((item) => fragment.append(createRow(item)));
+  STATIONS[activeStation].items
+    .forEach((item) => fragment.append(createRow(item)));
   inventoryBody.replaceChildren(fragment);
   filterItems();
 }
@@ -1309,7 +1489,9 @@ function filterItems() {
 
   const totalItems = activeStation === "summary"
     ? inventoryBody.querySelectorAll("tr:not(.summary-category-row)").length
-    : STATIONS[activeStation].items.length;
+    : activeStation === "produce"
+      ? AFTERNOON_PRODUCE_ITEMS.length
+      : STATIONS[activeStation].items.length;
   itemCount.textContent = query
     ? `顯示 ${visible} / ${totalItems} 項`
     : `共 ${totalItems} 項`;
@@ -1319,6 +1501,19 @@ function filterItems() {
 inventoryBody.addEventListener("input", (event) => {
   const input = event.target.closest(".number-input");
   if (!input) return;
+
+  if (input.dataset.produceOrder) {
+    const order = input.dataset.produceOrder;
+    inventory[order] ||= {};
+    inventory[order].quantity = input.value;
+    const item = AFTERNOON_PRODUCE_ITEMS.find((entry) => String(entry.order) === order);
+    const totalCell = inventoryBody.querySelector(`[data-produce-total-for="${order}"]`);
+    if (item && totalCell) {
+      totalCell.textContent = formatNumber(toNumber(input.value) + producePrepTotal(item));
+    }
+    saveInventory();
+    return;
+  }
 
   const order = input.dataset.order;
   const field = input.dataset.field;
@@ -1357,20 +1552,24 @@ stationTabs.addEventListener("click", (event) => {
     button.classList.toggle("active", button === tab);
   });
   const isSummary = activeStation === "summary";
+  const isProduce = activeStation === "produce";
   inventorySection.setAttribute("aria-label", isSummary
     ? `${KitchenStore.current.name} 各站周盤整店總表`
-    : `${KitchenStore.current.name} ${STATIONS[activeStation].label} 週盤點`);
-  prepSyncSection.hidden = isSummary;
-  setTableHead(isSummary);
+    : isProduce
+      ? `${KitchenStore.current.name} 下午冷藏蔬菜盤點`
+      : `${KitchenStore.current.name} ${STATIONS[activeStation].label} 週盤點`);
+  prepSyncSection.hidden = isSummary || isProduce;
+  itemSettingsButton.hidden = isSummary || isProduce;
+  setTableHead(isSummary ? "summary" : isProduce ? "produce" : "station");
   saveState.textContent = "已載入";
   renderItems();
 });
 
 renderItems();
-setTableHead(false);
+setTableHead("station");
 inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);
 itemSettingsButton.addEventListener("click", () => {
-  if (activeStation === "summary") return alert("請先選擇 S1、S2、Pizza 或 Cold。");
+  if (activeStation === "summary" || activeStation === "produce") return alert("請先選擇 S1、S2、Pizza 或 Cold。");
   KitchenItemSettings.openManager("weekly", activeStation, BASE_STATION_ITEMS[activeStation], () => location.reload());
 });
