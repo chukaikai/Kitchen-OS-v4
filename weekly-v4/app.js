@@ -301,6 +301,13 @@ const PREP_TO_WEEKLY = {
       note: "半成品紅藜麥：每盒回推生紅藜麥0.21包",
     },
     {
+      targetCode: "168011SS",
+      targetName: "洋薏仁",
+      order: 62,
+      sources: [[10, 0.0875]],
+      note: "熟洋薏仁：350g生洋薏仁煮成4盒；每盒回推1KG／包生洋薏仁0.0875包",
+    },
+    {
       targetCode: "168015SS",
       targetName: "夏季5%黑松露醬",
       order: 61,
@@ -311,28 +318,28 @@ const PREP_TO_WEEKLY = {
       targetCode: "CKC000004",
       targetName: "番茄沙拉醃汁",
       order: 7,
-      sources: [[10, 1]],
+      sources: [[13, 1]],
       note: "醃綜合蕃茄：每盒使用蕃茄醃汁1包",
     },
     {
       targetCode: "144011SS",
       targetName: "聖女蕃茄",
       order: 42,
-      sources: [[10, 1]],
+      sources: [[13, 1]],
       note: "醃綜合蕃茄：每盒使用聖女蕃茄（中）1kg",
     },
     {
       targetCode: "142022SS",
       targetName: "綜合彩色番茄",
       order: 44,
-      sources: [[10, 1]],
+      sources: [[13, 1]],
       note: "醃綜合蕃茄：每盒使用綜合彩色番茄1kg",
     },
     {
       targetCode: "142004SS",
       targetName: "乾蔥",
       order: 71,
-      sources: [[10, 0.065]],
+      sources: [[13, 0.065]],
       note: "醃綜合蕃茄：每盒使用乾蔥0.065kg；百里香與EVO不回推",
     },
     { order: 27, sources: [[25, 0.25]] },
@@ -788,7 +795,17 @@ if (KitchenStore.current?.id === "taipei-dome") {
   Object.entries(STATIONS).forEach(([station, stationConfig]) => {
     stationConfig.items.forEach((item) => {
       if (item.code === "142013SS") item.name = "白皮馬鈴薯/公斤";
-      if (item.code === "CKC000004" && !item.name.includes("巴西里油")) return;
+      if (item.code === "CKC000004" && item.name.includes("番茄沙拉醃汁")) {
+        WEEKLY_CONVERSIONS[station] ||= {};
+        WEEKLY_CONVERSIONS[station][item.order] = {
+          storageFactor: 1,
+          stationFactor: 1,
+          storageUnit: "包",
+          stationUnit: "包",
+          note: "番茄沙拉醃汁儲位與站上皆盤包；備料回推亦以包數帶入",
+        };
+        return;
+      }
       const config = domeStationWeightConversions[item.code];
       if (!config) return;
       WEEKLY_CONVERSIONS[station] ||= {};
@@ -1133,7 +1150,7 @@ async function loadPrepInventory() {
     // 醃綜合蕃茄固定拆料：直接用品項代碼定位兩種鮮蕃茄，避免名稱中的
     // 「蕃／番」或「綜合櫻」規格文字差異造成同步漏項。
     if (station === "cold") {
-      const tomatoBoxesRaw = saved.rows[10]?.actual;
+      const tomatoBoxesRaw = saved.rows[13]?.actual;
       if (
         tomatoBoxesRaw !== "" &&
         tomatoBoxesRaw != null &&
