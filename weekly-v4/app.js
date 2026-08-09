@@ -823,6 +823,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
   // Weekly 站上欄則統一保存成周盤原包裝／原料主單位。
   // 大巨蛋 S1 原始備料表列序（0 起算）；炒菇調味汁由本版附加在第 27 列。
   const cookedMushroom = 0;
+  const beefJus = 14;
   const ribeye = 15;
   const potato = 16;
   const lamb = 17;
@@ -831,6 +832,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "142016SS", targetName: "香菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
     { targetCode: "142015SS", targetName: "蘑菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
     { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
+    { targetCode: "CKH000012", targetName: "褐色雞湯", sources: [[beefJus, 0.5]], note: "牛汁：每盒100g含褐色雞湯50g；回推100G／包褐色雞湯0.5包" },
     { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
     { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
