@@ -1094,11 +1094,41 @@ async function loadPrepInventory() {
     return rule.order;
   }
 
+  // 先移除上一次抓取產生的回推值，只保留 Weekly 人工輸入的站上數字。
+  // 若選擇的日期沒有備料存檔，就不會繼續顯示前一日的回推庫存。
+  function clearPreviousPrepLinks(stationInventory) {
+    Object.values(stationInventory).forEach((current) => {
+      if (!current || typeof current !== "object" || !current.prepLinked) return;
+      current.station = current.manualStation ?? "";
+      delete current.manualStation;
+      delete current.prepValue;
+      delete current.prepLinked;
+      delete current.prepDate;
+      delete current.prepNote;
+    });
+  }
+
+  function addPrepValue(stationInventory, targetOrder, value, note) {
+    stationInventory[targetOrder] ||= {};
+    const current = stationInventory[targetOrder];
+    const manualStation = current.prepLinked
+      ? toNumber(current.manualStation)
+      : toNumber(current.station);
+    current.manualStation = formatNumber(manualStation);
+    current.prepValue = formatNumber(value);
+    current.station = formatNumber(manualStation + value);
+    current.prepLinked = true;
+    current.prepDate = date;
+    current.prepNote = note || `由 ${date} 備料盤點換算`;
+  }
+
   for (const [station, rules] of Object.entries(PREP_TO_WEEKLY)) {
     const saved = await getPrepInventory(station, date);
     const stationInventory = loadInventory(station);
+    clearPreviousPrepLinks(stationInventory);
     if (!saved?.rows) {
       missingStations += 1;
+      localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
       continue;
     }
     // v18 修正：舊版曾將 S2 甘蔥碎誤寫到第 41 項白米。
@@ -1136,17 +1166,12 @@ async function loadPrepInventory() {
       linked += 1;
     });
     convertedByTarget.forEach((entry, targetOrder) => {
-      stationInventory[targetOrder] ||= {};
-      const current = stationInventory[targetOrder];
-      const manualStation = current.prepLinked
-        ? toNumber(current.manualStation)
-        : toNumber(current.station);
-      current.manualStation = formatNumber(manualStation);
-      current.prepValue = formatNumber(entry.value);
-      current.station = formatNumber(manualStation + entry.value);
-      current.prepLinked = true;
-      current.prepDate = date;
-      current.prepNote = entry.notes.join("；") || `由 ${date} 備料盤點換算`;
+      addPrepValue(
+        stationInventory,
+        targetOrder,
+        entry.value,
+        entry.notes.join("；") || `由 ${date} 備料盤點換算`,
+      );
     });
 
     // 醃綜合蕃茄固定拆料：直接用品項代碼定位兩種鮮蕃茄，避免名稱中的
@@ -1166,11 +1191,17 @@ async function loadPrepInventory() {
         tomatoTargets.forEach(([code, name]) => {
           const target = STATIONS.cold.items.find((item) => item.code === code);
           if (!target) return;
-          stationInventory[target.order] ||= {};
-          stationInventory[target.order].station = formatNumber(tomatoKg);
-          stationInventory[target.order].prepLinked = true;
-          stationInventory[target.order].prepDate = date;
-          stationInventory[target.order].prepNote = `醃綜合蕃茄：每盒回推${name} 1kg`;
+          // 兩種番茄已有一般回推規則時，不重複加總，只補強說明。
+          if (stationInventory[target.order]?.prepLinked) {
+            stationInventory[target.order].prepNote = `醃綜合蕃茄：每盒回推${name} 1kg`;
+          } else {
+            addPrepValue(
+              stationInventory,
+              target.order,
+              tomatoKg,
+              `醃綜合蕃茄：每盒回推${name} 1kg`,
+            );
+          }
         });
         coldTomatoValues = formatNumber(tomatoKg);
       }
