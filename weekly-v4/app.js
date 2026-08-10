@@ -945,6 +945,16 @@ if (KitchenStore.current?.id === "taipei-dome") {
   const s1EggplantItem = ensureStationWeeklyItem("s1", "142018SS", "圓茄/公斤", "Kg / 公斤");
   const s1ThymeItem = ensureStationWeeklyItem("s1", "145006SS", "百里香/公斤", "Kg / 公斤");
   const s1RosemaryItem = ensureStationWeeklyItem("s1", "181004SS", "迷迭香/公斤", "Kg / 公斤");
+  const s1BrownStockItem = STATIONS.s1.items.find((item) => item.code === "CKH000012" || item.name.includes("褐色雞湯"));
+  if (s1BrownStockItem) {
+    WEEKLY_CONVERSIONS.s1[s1BrownStockItem.order] = {
+      storageFactor: 1,
+      stationFactor: 1 / 200,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "站上盤重量；200g＝1袋",
+    };
+  }
   PREP_TO_WEEKLY.s1 = [
     { targetCode: "CKM000002", targetName: "舒肥牛小排", sources: [[16, 0.21]], note: "分牛小排：備料盤份；每份210g＝0.21kg" },
     { targetCode: "CKM000001", targetName: "舒肥牛肋條", sources: [[7, 0.11]], note: "分牛肋條：備料盤份；每份110g＝0.11kg" },
@@ -952,7 +962,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "142016SS", targetName: "香菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
     { targetCode: "142015SS", targetName: "蘑菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
     { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
-    { targetCode: "CKH000012", targetName: "褐色雞湯", sourcesAny: [beefJus, 14], factor: 0.25, note: "牛汁：每盒100g含褐色雞湯50g；回推200G／包褐色雞湯0.25包" },
+    { targetCode: "CKH000012", targetName: "褐色雞湯", sourceName: "牛汁", sources: [[beefJus, 0.25]], note: "牛汁：每盒100g含褐色雞湯50g；回推200G／包褐色雞湯0.25包（站上顯示50g）" },
     { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
     { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
@@ -961,8 +971,8 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "141001SS", targetName: "牛蕃茄", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
     { targetCode: "143001SS", targetName: "奶油萵苣", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
     { targetCode: s1EggplantItem.code, targetName: "圓茄", sources: [[21, 0.28]], note: "茄子：每份回推圓茄0.28kg" },
-    { targetCode: "142028SS", targetName: "青花菜", sources: [[12, 0.03]], note: "豆腐菜包：每份含青花菜0.03kg" },
-    { targetCode: "142030SS", targetName: "球芽甘藍", sources: [[12, 0.03]], note: "豆腐菜包：每份含球芽甘藍0.03kg" },
+    { targetCode: "142028SS", targetName: "青花菜", sourceName: "豆腐菜", sources: [[12, 0.03]], note: "豆腐菜：每份含青花菜0.03kg" },
+    { targetCode: "142030SS", targetName: "球芽甘藍", sourceName: "豆腐菜", sources: [[12, 0.03]], note: "豆腐菜：每份含球芽甘藍0.03kg" },
     { targetCode: "142029SS", targetName: "秋葵", sources: [[11, 0.3]], note: "切秋葵：每盒300g，回推秋葵0.3kg" },
     { targetCode: "145001SS", targetName: "蝦夷蔥", sources: [[1, 0.025]], note: "蝦夷蔥：每盒25g，回推0.025kg" },
     { targetCode: "145002SS", targetName: "蒔蘿", sources: [[19, 0.01]], note: "蒔蘿：每盒10g，回推0.01kg" },
