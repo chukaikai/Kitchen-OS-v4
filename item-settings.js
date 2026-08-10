@@ -2,6 +2,12 @@
   "use strict";
   const KEY="kitchen-os:item-settings:v1";
   const UNIFIED_DEFAULTS_MARKER="kitchen-os:unified-dome-defaults:v1";
+  const PRODUCE_ORDER_MARKER="kitchen-os:produce-store-order:v1";
+  const PRODUCE_ORDERS={
+    "taipei101":["142010SS","144011SS","142013SS","142006SS","142012SS","181005SS","145009SS","145003SS","181002SS","145006SS","145008SS","142001SS","142009SS","145002SS","produce-yellow-lemon","145001SS","142016SS","142015SS","142017SS","181004SS","142030SS","142018SS","141001SS","143001SS","142019SS","181003SS","145004SS","142014SS","142003SS","142002SS","142004SS","145015SS"],
+    "nangang":["144011SS","142010SS","142012SS","142006SS","142009SS","142020SS","142001SS","181005SS","181002SS","145003SS","145009SS","145008SS","145002SS","145006SS","181004SS","142019SS","142041SS","145015SS","142004SS","143001SS","141001SS","142015SS","142016SS","142017SS","145001SS","142028SS","142030SS","142029SS","168021SS","142014SS","145004SS","181003SS","142013SS","produce-yellow-lemon","144013SS"],
+    "taipei-dome":["142010SS","144011SS","142013SS","142006SS","142012SS","181005SS","145009SS","145003SS","181002SS","145006SS","145008SS","142001SS","142037SS","142009SS","145002SS","produce-yellow-lemon","145001SS","142016SS","142015SS","142017SS","181004SS","168021SS","142030SS","142018SS","141001SS","143001SS","142019SS","181003SS","145004SS","142014SS","142003SS","142002SS","142004SS","145015SS","144013SS","142028SS"]
+  };
   const TYPES=["weekly","central","prep"];
   const STATIONS=["s1","s2","pizza","cold"];
   if(window.KitchenStore?.current && window.KitchenStore.current.id!=="taipei-dome" && !localStorage.getItem(UNIFIED_DEFAULTS_MARKER)){
@@ -21,6 +27,20 @@
     const cfg=get(type,station), hidden=new Set(cfg.hidden||[]), byId=new Map();
     base.forEach((item,index)=>byId.set(idFor(type,item,index),item));
     (cfg.custom||[]).forEach((item,index)=>byId.set(idFor(type,item,index),item));
+    if(type==="weekly"&&station==="produce"&&window.KitchenStore?.current&&!localStorage.getItem(PRODUCE_ORDER_MARKER)){
+      const wanted=PRODUCE_ORDERS[window.KitchenStore.current.id]||[];
+      const rank=new Map(wanted.map((code,index)=>[code,index]));
+      const entries=[...byId.entries()];
+      entries.sort((a,b)=>{
+        const ai=rank.has(a[1].code)?rank.get(a[1].code):Number.MAX_SAFE_INTEGER;
+        const bi=rank.has(b[1].code)?rank.get(b[1].code):Number.MAX_SAFE_INTEGER;
+        return ai-bi;
+      });
+      cfg.order=entries.map(([id])=>id);
+      cfg.hidden=[];
+      set(type,station,cfg);
+      localStorage.setItem(PRODUCE_ORDER_MARKER,"1");
+    }
     const ids=[...(cfg.order||[]),...byId.keys()].filter((id,i,a)=>a.indexOf(id)===i&&byId.has(id));
     return ids.filter(id=>!hidden.has(id)).map(id=>byId.get(id));
   }

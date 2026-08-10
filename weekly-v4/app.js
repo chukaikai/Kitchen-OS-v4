@@ -261,6 +261,8 @@ const BASE_AFTERNOON_PRODUCE_ITEMS = makeItems([
   ["142041SS", "裂葉芝麻葉/500G/包", "Bag / 袋"],
   ["142037SS", "白花椰/公斤", "Kg / 公斤"],
   ["142018SS", "圓茄/公斤", "Kg / 公斤"],
+  ["produce-yellow-lemon", "黃檸檬/公斤", "Kg / 公斤"],
+  ["144013SS", "無籽檸檬/公斤", "Kg / 公斤"],
 ]);
 const AFTERNOON_PRODUCE_ITEMS = KitchenItemSettings.apply(
   "weekly",
