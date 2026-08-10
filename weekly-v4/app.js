@@ -439,7 +439,7 @@ const PREP_TO_WEEKLY = {
     { order: 17, sources: [[14, 2]], note: "伏特加辣番茄醬：站上1桶＝原物料2包" },
     { order: 18, sources: [[18, 2 / 3]], note: "蝦醬：站上3桶＝紅蝦高湯2包" },
     { order: 19, sources: [[11, 1]], note: "綠沙沙醬：站上1罐＝巴西里青醬1包" },
-    { order: 22, sources: [[4, 0.56]], note: "蝦仁：站上1盒＝8份×70g＝0.56kg" },
+    { order: 22, sources: [[4, 0.4]], note: "蝦仁：站上1盒＝8份×50g＝0.4kg" },
     { targetCode: "142004SS", targetName: "乾蔥", order: 42, sources: [[6, 0.05]], note: "甘蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒甘蔥碎分開計算" },
     { order: 31, sources: [[0, 0.05], [1, 0.1]], note: "巴西里碎與巴西里葉回推捲葉巴西里" },
     { order: 32, sources: [[3, 0.15]] },
@@ -477,9 +477,31 @@ const PREP_TO_WEEKLY = {
     },
     { order: 13, sources: [[5, 0.001]] },
     { order: 14, sources: [[3, 0.4]] },
-    { order: 15, sources: [[10, 0.001]] },
+    { order: 15, sources: [[10, 1 / 500]], note: "芝麻葉：備料以g盤點，每500g回推裂葉芝麻葉1包" },
+    { order: 1, sources: [[11, 1 / 6]], note: "當日Pizza麵團：每6顆回推冷凍Pizza麵團1包" },
   ],
 };
+
+// Pizza 蔬菜備料也必須回到該站周盤；若店鋪舊設定尚未含這些列，補入
+// 正確原料，儲位仍由下午蔬菜統一盤，站上只承接備料回推與人工盤點。
+function ensureStationWeeklyItem(station, code, name, unit) {
+  let item = STATIONS[station].items.find((entry) => entry.code === code);
+  if (item) return item;
+  const nextOrder = Math.max(0, ...STATIONS[station].items.map((entry) => Number(entry.order) || 0)) + 1;
+  item = { order: nextOrder, code, name, unit };
+  STATIONS[station].items.push(item);
+  return item;
+}
+
+const pizzaSweetBasil = ensureStationWeeklyItem("pizza", "145015SS", "特規甜蘿勒/公斤", "Kg / 公斤");
+const pizzaGarlic = ensureStationWeeklyItem("pizza", "142019SS", "蒜仁-大 /公斤", "Kg / 公斤");
+const pizzaMushroom = ensureStationWeeklyItem("pizza", "142016SS", "濕香菇/中/5公分/公斤", "Kg / 公斤");
+
+PREP_TO_WEEKLY.pizza.push(
+  { targetCode: pizzaSweetBasil.code, targetName: "特規甜蘿勒", sources: [[2, 1]], note: "甜羅勒葉：備料以kg盤點，等量回推特規甜蘿勒" },
+  { targetCode: pizzaGarlic.code, targetName: "蒜仁", sources: [[7, 0.1]], note: "蒜片：每盒100g，回推蒜仁0.1kg" },
+  { targetCode: pizzaMushroom.code, targetName: "濕香菇", sources: [[9, 1]], note: "烤香菇片：每盒熟重500g，依50%烹調率回推生香菇1kg" },
+);
 
 // Weekly 的儲位與站上可能使用不同盤點單位；TOTAL 一律依品項主單位換算。
 // S1：修清肋眼（包＋包→kg）、極細脆薯條（袋＋份→袋）。
@@ -895,6 +917,20 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
     { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
+    { targetCode: "", targetName: "玉米糖膠液", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
+    { targetCode: "168021SS", targetName: "大漢板豆腐", sources: [[10, 1]], note: "切豆腐：備料1盒回推大漢板豆腐1盒" },
+    { targetCode: "141001SS", targetName: "牛蕃茄", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
+    { targetCode: "143001SS", targetName: "奶油萵苣", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
+    { targetCode: "142018SS", targetName: "圓茄", sources: [[21, 0.28]], note: "茄子：每份回推圓茄0.28kg" },
+    { targetCode: "142028SS", targetName: "青花菜", sources: [[12, 0.03]], note: "豆腐菜包：每份含青花菜0.03kg" },
+    { targetCode: "142030SS", targetName: "球芽甘藍", sources: [[12, 0.03]], note: "豆腐菜包：每份含球芽甘藍0.03kg" },
+    { targetCode: "142029SS", targetName: "秋葵", sources: [[11, 0.3]], note: "切秋葵：每盒300g，回推秋葵0.3kg" },
+    { targetCode: "145001SS", targetName: "蝦夷蔥", sources: [[1, 0.025]], note: "蝦夷蔥：每盒25g，回推0.025kg" },
+    { targetCode: "145002SS", targetName: "蒔蘿", sources: [[19, 0.01]], note: "蒔蘿：每盒10g，回推0.01kg" },
+    { targetCode: "142004SS", targetName: "乾蔥", sources: [[4, 0.05]], note: "甘蔥碎：每盒50g，回推乾蔥0.05kg" },
+    { targetCode: "161014SS", targetName: "法式芥", sources: [[17, 0.17]], note: "蛋刷醬：每盒含法式芥末子醬170g，回推1kg／罐的0.17罐" },
+    { targetCode: "184010SS", targetName: "玉米粉", sources: [[17, 70 / 375]], note: "蛋刷醬：每盒含玉米粉70g，回推375g／盒" },
+    { targetName: "殺菌蛋白液", sources: [[17, 100 / 970]], note: "蛋刷醬：每盒含蛋白液100g，回推970g／罐" },
     { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
     { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
     { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
@@ -1397,6 +1433,9 @@ async function loadPrepInventory() {
       }
       if (!hasValue) return;
       const targetOrder = resolveTargetOrder(station, rule);
+      // 品項設定若尚未包含回推目標，不可把數字寫進 undefined 欄位。
+      // 這也讓 S1 的配方核對更容易：只有實際存在於該站周盤的原料才會帶入。
+      if (targetOrder == null) return;
       const entry = convertedByTarget.get(targetOrder) || { value: 0, notes: [] };
       entry.value += converted;
       if (rule.note) entry.notes.push(rule.note);
