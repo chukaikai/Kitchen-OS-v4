@@ -429,6 +429,26 @@ const PREP_TO_WEEKLY = {
     { order: 47, sources: [[17, 0.186667]], note: "蛋刷醬：每盒含70g玉米粉（375g／盒）" },
     { order: 53, sources: [[17, 0.103093]], note: "蛋刷醬：每盒含100g殺菌蛋白液（970g／罐）" },
     { order: 54, sources: [[0, 0.384615]], note: "混菇：1kg盒依2.6kg配方拆回香菇" },
+    {
+      targetCode: "181003SS",
+      targetName: "平葉巴西里",
+      order: 61,
+      sources: [[5, 0.001]],
+      note: "帶梗巴西里：備料以g盤點，1000g回推平葉巴西里1kg",
+    },
+    {
+      targetCode: "131002SS",
+      targetName: "鮭魚菲力",
+      sources: [[8, 1]],
+      note: "切鮭魚：備料以份盤點，1份回推鮭魚菲力1個",
+    },
+    {
+      targetCode: "CKC000024",
+      targetName: "醃黃瓜條",
+      order: 24,
+      sources: [[18, 0.01]],
+      note: "醃黃瓜丁：備料以g盤點，每100g回推醃黃瓜條1袋",
+    },
   ],
   s2: [
     { order: 8, sources: [[12, 1]], note: "波隆那肉醬：站上1桶＝原物料1包" },
@@ -439,7 +459,7 @@ const PREP_TO_WEEKLY = {
     { order: 17, sources: [[14, 2]], note: "伏特加辣番茄醬：站上1桶＝原物料2包" },
     { order: 18, sources: [[18, 2 / 3]], note: "蝦醬：站上3桶＝紅蝦高湯2包" },
     { order: 19, sources: [[11, 1]], note: "綠沙沙醬：站上1罐＝巴西里青醬1包" },
-    { order: 22, sources: [[4, 0.4]], note: "蝦仁：站上1盒＝8份×50g＝0.4kg" },
+    { order: 22, sources: [[4, 0.56]], note: "蝦仁：備料後不含冰，站上1盒＝8份×70g＝0.56kg" },
     { targetCode: "142004SS", targetName: "乾蔥", order: 42, sources: [[6, 0.05]], note: "甘蔥碎：站上1盒50g＝乾蔥0.05kg；與白酒甘蔥碎分開計算" },
     { order: 31, sources: [[0, 0.05], [1, 0.1]], note: "巴西里碎與巴西里葉回推捲葉巴西里" },
     { order: 32, sources: [[3, 0.15]] },
@@ -496,6 +516,7 @@ function ensureStationWeeklyItem(station, code, name, unit) {
 const pizzaSweetBasil = ensureStationWeeklyItem("pizza", "145015SS", "特規甜蘿勒/公斤", "Kg / 公斤");
 const pizzaGarlic = ensureStationWeeklyItem("pizza", "142019SS", "蒜仁-大 /公斤", "Kg / 公斤");
 const pizzaMushroom = ensureStationWeeklyItem("pizza", "142016SS", "濕香菇/中/5公分/公斤", "Kg / 公斤");
+const s1Salmon = ensureStationWeeklyItem("s1", "131002SS", "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱", "Ea / 個");
 
 PREP_TO_WEEKLY.pizza.push(
   { targetCode: pizzaSweetBasil.code, targetName: "特規甜蘿勒", sources: [[2, 1]], note: "甜羅勒葉：備料以kg盤點，等量回推特規甜蘿勒" },
@@ -578,6 +599,20 @@ const WEEKLY_CONVERSIONS = {
       storageUnit: "袋",
       stationUnit: "g",
       note: "1袋＝200g",
+    },
+    24: {
+      storageFactor: 1,
+      stationFactor: 1 / 100,
+      storageUnit: "袋",
+      stationUnit: "g",
+      note: "醃黃瓜條1袋＝100g；站上盤醃黃瓜丁重量",
+    },
+    61: {
+      storageFactor: 1,
+      stationFactor: 1 / 1000,
+      storageUnit: "kg",
+      stationUnit: "g",
+      note: "帶梗巴西里站上盤g；1000g＝平葉巴西里1kg",
     },
     19: {
       storageFactor: 1,
