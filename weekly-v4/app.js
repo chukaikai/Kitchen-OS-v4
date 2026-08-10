@@ -223,7 +223,7 @@ const STATIONS = {
 
 // 大巨蛋下午由主管統一盤點冷藏儲位的蔬菜。四個站別仍保留品項列與
 // 站上盤點；只有儲位改由下午蔬菜表統一盤，避免重複計算。
-const AFTERNOON_PRODUCE_ITEMS = makeItems([
+const BASE_AFTERNOON_PRODUCE_ITEMS = makeItems([
   ["168021SS", "大漢板豆腐/400克/盒", "Box / 盒"],
   ["142019SS", "蒜仁-大 /公斤", "Kg / 公斤"],
   ["142004SS", "甘蔥(紅蔥頭)/公斤", "Kg / 公斤"],
@@ -262,7 +262,14 @@ const AFTERNOON_PRODUCE_ITEMS = makeItems([
   ["142037SS", "白花椰/公斤", "Kg / 公斤"],
   ["142018SS", "圓茄/公斤", "Kg / 公斤"],
 ]);
-const AFTERNOON_PRODUCE_CODES = new Set(AFTERNOON_PRODUCE_ITEMS.map((item) => item.code));
+const AFTERNOON_PRODUCE_ITEMS = KitchenItemSettings.apply(
+  "weekly",
+  "produce",
+  BASE_AFTERNOON_PRODUCE_ITEMS,
+);
+// 是否由下午蔬菜統一管理要看完整原始清單；即使主管暫時隱藏某列，
+// 其他站別也不能因此重新出現儲位欄，否則會造成重複盤點。
+const AFTERNOON_PRODUCE_CODES = new Set(BASE_AFTERNOON_PRODUCE_ITEMS.map((item) => item.code));
 const produceEnabled = Boolean(KitchenStore.current);
 
 function isAfternoonProduce(item) {
@@ -1756,7 +1763,7 @@ stationTabs.addEventListener("click", (event) => {
       ? `${KitchenStore.current.name} 下午冷藏蔬菜盤點`
       : `${KitchenStore.current.name} ${STATIONS[activeStation].label} 週盤點`);
   prepSyncSection.hidden = isSummary || isProduce;
-  itemSettingsButton.hidden = isSummary || isProduce;
+  itemSettingsButton.hidden = isSummary;
   setTableHead(isSummary ? "summary" : isProduce ? "produce" : "station");
   saveState.textContent = "已載入";
   renderItems();
@@ -1768,7 +1775,16 @@ inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);
 inventoryDate.addEventListener("change", loadPrepInventory);
 itemSettingsButton.addEventListener("click", () => {
-  if (activeStation === "summary" || activeStation === "produce") return alert("請先選擇 S1、S2、Pizza 或 Cold。");
+  if (activeStation === "summary") return alert("請先選擇工作站或下午蔬菜。");
+  if (activeStation === "produce") {
+    KitchenItemSettings.openManager(
+      "weekly",
+      "produce",
+      BASE_AFTERNOON_PRODUCE_ITEMS,
+      () => location.reload(),
+    );
+    return;
+  }
   KitchenItemSettings.openManager("weekly", activeStation, BASE_STATION_ITEMS[activeStation], () => location.reload());
 });
 
