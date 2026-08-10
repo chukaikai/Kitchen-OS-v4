@@ -100,7 +100,7 @@ const STATIONS = {
       ["CKC000022", "黑蒜醬 300G/BAG", "Bag / 袋"],
       ["CKH000021", "預拌薯泥-450G/BAG", "Bag / 袋"],
       ["CKH000036", "紫高麗菜泥 250G/BAG", "Bag / 袋"],
-      ["CKH000012", "褐色雞湯 100G/BAG", "Bag / 袋"],
+      ["CKH000012", "褐色雞湯 200G/BAG", "Bag / 袋"],
       ["CKH000023", "香料雞汁-200G/BAG", "Bag / 袋"],
       ["CKH000001", "香料油-300G/BAG", "Bag / 袋"],
       ["CKC000020", "鯷魚奶油 300G/ 條", "Pc / 片"],
@@ -414,7 +414,7 @@ const PREP_TO_WEEKLY = {
     { order: 2, sources: [[16, 0.21]] },
     { order: 3, sources: [[7, 0.11]] },
     { order: 4, sources: [[6, 0.11]] },
-    { order: 11, sources: [[20, 0.5]], note: "牛汁：每盒含50g褐色雞湯；褐色雞湯100g／包" },
+    { order: 11, sourcesAny: [20, 14], factor: 0.25, note: "牛汁：每盒含50g褐色雞湯；褐色雞湯200g／包" },
     { order: 26, sources: [[10, 1]] },
     { order: 29, sources: [[9, 0.03]], note: "漢堡菜：每份含30g牛蕃茄" },
     { order: 30, sources: [[0, 0.384615]], note: "混菇：1kg盒依2.6kg配方拆回洋菇" },
@@ -891,14 +891,17 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "142016SS", targetName: "香菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
     { targetCode: "142015SS", targetName: "蘑菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
     { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
-    { targetCode: "CKH000012", targetName: "褐色雞湯", sources: [[beefJus, 0.5]], note: "牛汁：每盒100g含褐色雞湯50g；回推100G／包褐色雞湯0.5包" },
+    { targetCode: "CKH000012", targetName: "褐色雞湯", sourcesAny: [beefJus, 14], factor: 0.25, note: "牛汁：每盒100g含褐色雞湯50g；回推200G／包褐色雞湯0.25包" },
     { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
     { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
     { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
     { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
     { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
-  ].filter((rule) => rule.sources.every(([index]) => index >= 0));
+  ].filter((rule) => {
+    if (rule.sourcesAny) return rule.sourcesAny.some((index) => index >= 0);
+    return rule.sources.every(([index]) => index >= 0);
+  });
 
   // 大巨蛋 Cold 新增四項備料回推。
   // 薄荷醬在備料表盤「盒／倍數」：1盒就是完整1倍配方（374g）。
@@ -1375,11 +1378,23 @@ async function loadPrepInventory() {
     const convertedByTarget = new Map();
     rules.forEach((rule) => {
       let hasValue = false;
-      const converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
-        const raw = saved.rows[rowIndex]?.actual;
-        if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
-        return sum + toNumber(raw) * factor;
-      }, 0);
+      let converted = 0;
+      if (rule.sourcesAny) {
+        const matchedIndex = rule.sourcesAny.find((rowIndex) => {
+          const raw = saved.rows[rowIndex]?.actual;
+          return raw !== "" && raw != null && Number.isFinite(Number(raw));
+        });
+        if (matchedIndex != null) {
+          hasValue = true;
+          converted = toNumber(saved.rows[matchedIndex]?.actual) * rule.factor;
+        }
+      } else {
+        converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
+          const raw = saved.rows[rowIndex]?.actual;
+          if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
+          return sum + toNumber(raw) * factor;
+        }, 0);
+      }
       if (!hasValue) return;
       const targetOrder = resolveTargetOrder(station, rule);
       const entry = convertedByTarget.get(targetOrder) || { value: 0, notes: [] };
