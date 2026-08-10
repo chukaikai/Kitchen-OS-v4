@@ -973,7 +973,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
     { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
     { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
-    { targetCode: s1SalmonItem.code, targetName: "鮭魚菲力", sources: [[8, 1]], note: "切鮭魚：備料盤份；1份回推鮭魚菲力1個" },
+    { targetCode: s1SalmonItem.code, targetName: "鮭魚菲力", sourceName: "切鮭魚", sources: [[8, 1]], note: "切鮭魚：備料盤份；1份回推鮭魚菲力1個" },
   ].filter((rule) => {
     if (rule.sourcesAny) return rule.sourcesAny.some((index) => index >= 0);
     return rule.sources.every(([index]) => index >= 0);
@@ -1477,7 +1477,10 @@ async function loadPrepInventory() {
         }
       } else {
         converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
-          const raw = saved.rows[rowIndex]?.actual;
+          const namedRow = rule.sourceName
+            ? saved.rows.find((row) => String(row?.name || "").includes(rule.sourceName))
+            : null;
+          const raw = namedRow?.actual ?? saved.rows[rowIndex]?.actual;
           if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
           return sum + toNumber(raw) * factor;
         }, 0);
