@@ -1,8 +1,13 @@
 (function(){
   "use strict";
   const KEY="kitchen-os:item-settings:v1";
+  const UNIFIED_DEFAULTS_MARKER="kitchen-os:unified-dome-defaults:v1";
   const TYPES=["weekly","central","prep"];
   const STATIONS=["s1","s2","pizza","cold"];
+  if(window.KitchenStore?.current && window.KitchenStore.current.id!=="taipei-dome" && !localStorage.getItem(UNIFIED_DEFAULTS_MARKER)){
+    localStorage.removeItem(KEY);
+    localStorage.setItem(UNIFIED_DEFAULTS_MARKER,"1");
+  }
   function read(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){return {}}}
   function write(data){localStorage.setItem(KEY,JSON.stringify(data))}
   function key(type,station){return type+":"+station}

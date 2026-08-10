@@ -263,7 +263,7 @@ const AFTERNOON_PRODUCE_ITEMS = makeItems([
   ["142018SS", "圓茄/公斤", "Kg / 公斤"],
 ]);
 const AFTERNOON_PRODUCE_CODES = new Set(AFTERNOON_PRODUCE_ITEMS.map((item) => item.code));
-const produceEnabled = KitchenStore.current?.id === "taipei-dome";
+const produceEnabled = Boolean(KitchenStore.current);
 
 function isAfternoonProduce(item) {
   return produceEnabled && AFTERNOON_PRODUCE_CODES.has(item?.code);
@@ -273,7 +273,7 @@ const LEGACY_STATION_ITEMS = Object.fromEntries(
   Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
 );
 window.KitchenStoreDefaults?.applyWeekly(STATIONS);
-if (KitchenStore.current?.id === "taipei-dome") {
+if (KitchenStore.current) {
   const s1Items = STATIONS.s1.items;
   const eggWhole = s1Items.find((item) => item.order === 52);
   const eggWhite = s1Items.find((item) => item.order === 53);
@@ -502,64 +502,14 @@ const PREP_TO_WEEKLY = {
   ],
 };
 
-// 備料規則早期以列號建立。列號只用來指出「當時這一列的品名」，
-// 新版實際讀值一律回到當日存檔中用品名定位；排序、隱藏或插入品項
-// 都不會再讓公式抓到同一列上的其他備料。完全沒有 name 的舊存檔才
-// 保留列號相容。
-const LEGACY_PREP_SOURCE_NAMES = {
-  cold: ["羽衣甘藍(4×4cm) 300g","美生菜(4×4cm) 700g","香菜 30g","九層塔 30g","薄荷 30g","檸檬角 1開6／3顆","小黃瓜片(0.8cm) 400g","辣椒片0.1cm 100g","紫洋蔥絲0.2cm 250g","紅藜麥 250g","醃綜合蕃茄 2K","切醃小紅番茄 1K","布拉塔番茄汁 1000g","松露醬 240g","甘蔥圈0.1cm 100g","切達起司丁1×1cm 250g","玉米沙拉 250g","玉米片條1cm 0.7K","西芹片0.2cm 250g","裁切檸檬葉絲20g","烤過花生 250g","烤過白芝麻 250g","章魚75g／5份","章魚沙拉","西芹半月片0.5cm 250g","綠胡椒臘腸0.5×4.5cm 250g","檸檬油醋 250g","章魚馬鈴薯 2K","薄荷醬 1倍(374g)","醃漬小黃瓜丁","醃漬杏桃丁","鹽檸檬丁","紅椒丁","洋薏仁（低於10份煮10份）","鮮奶油 500g","有糖鮮奶油 500g","切胡桃派","退＋切紅蘿蔔蛋糕","薯條 150g"],
-  s1: ["混菇 1000g","蝦夷蔥 25g","菇汁 500g","玉米糖膠 1K","甘蔥碎 50g","帶梗巴西里","分雞腿 110g","分牛肋110g（冷凍需盤入）","切鮭魚 110g","漢堡菜／份","切豆腐（一開五）","切秋葵300g","豆腐菜包","退冰羊排","退冰肋眼","馬鈴薯200g／份","分牛小排210g","蛋刷醬 340g","醃黃瓜丁 100g","蒔蘿 10g","牛汁 100g","茄子"],
-  s2: ["巴西里碎 50g","巴西里葉 100g","烤雞巴西里梗10–15cm 200g","菠菜 150g","蝦仁 8份","墨魚絲 300g","甘蔥碎 50g","蔥絲 30g","綠辣椒片 50g","塔雷吉歐乳酪","薄荷 30g","綠沙沙醬 450g","波隆那肉醬1800g","喬爾蕃茄醬1650g","伏特加辣番茄醬2包","燉羊肉醬1包","墨魚肉醬1包","蛤蠣醬2包","蝦醬1600g"],
-  pizza: ["馬茲瑞拉起司1cm寬 4K","Pizza醬 5K","甜羅勒葉／片","乾蔥圈0.2cm 0.4K","佛特樂乾酪1×1cm 500g","帕馬森起司塊2K","退冰綜合起司包","蒜片0.2cm 100g","義式絞肉 400g","香菇0.3cm 500g","芝麻葉","當日Pizza麵團"],
-};
-
-function normalizePrepName(value) {
-  return String(value || "").toLowerCase()
-    .replace(/蕃/g, "番").replace(/生菜/g, "菜")
-    .replace(/熟混菇/g, "混菇").replace(/烤雞巴西里梗/g, "巴西里梗")
-    .replace(/綠胡椒臘腸|臘腸條/g, "臘腸")
-    .replace(/豆腐菜包/g, "豆腐菜")
-    .replace(/盤重量|冷凍需盤入|低於十份煮十份|低於10份煮10份/g, "")
-    .replace(/\d+(?:\.\d+)?/g, "")
-    .replace(/kg|k|g|cm|份|盒|桶|罐|包|片|顆|倍/gi, "")
-    .replace(/[\s\-_.\/／()（）×*＋+~–]/g, "");
-}
-
-function findSavedPrepRow(savedRows, station, rowIndex, explicitName) {
-  const expectedName = explicitName || LEGACY_PREP_SOURCE_NAMES[station]?.[rowIndex] || "";
-  const expected = normalizePrepName(expectedName);
-  if (!expected) return null;
-  const candidates = savedRows.filter((row) => {
-    const actual = normalizePrepName(row?.name);
-    return actual && (actual === expected || actual.includes(expected) || expected.includes(actual));
-  });
-  return candidates.find((row) => normalizePrepName(row?.name) === expected) || candidates[0] || null;
-}
-
 // Pizza 蔬菜備料也必須回到該站周盤；若店鋪舊設定尚未含這些列，補入
 // 正確原料，儲位仍由下午蔬菜統一盤，站上只承接備料回推與人工盤點。
 function ensureStationWeeklyItem(station, code, name, unit) {
-  const items = STATIONS[station].items;
-  const normalizedName = String(name || "").replace(/[\s\-()（）/]/g, "").toLowerCase();
-  const matches = items.filter((entry) => {
-    const entryName = String(entry.name || "").replace(/[\s\-()（）/]/g, "").toLowerCase();
-    return (code && entry.code === code) ||
-      (normalizedName && (entryName === normalizedName || entryName.includes(normalizedName) || normalizedName.includes(entryName)));
-  });
-  let item = matches[0];
-  if (item) {
-    Object.assign(item, { code, name, unit });
-    // 舊版可能先以品名加入一列、後續又因代碼未命中再新增一列。
-    // 保留原本排序最前的品項，移除同站重複列。
-    matches.slice(1).forEach((duplicate) => {
-      const index = items.indexOf(duplicate);
-      if (index >= 0) items.splice(index, 1);
-    });
-    return item;
-  }
+  let item = STATIONS[station].items.find((entry) => entry.code === code);
+  if (item) return item;
   const nextOrder = Math.max(0, ...STATIONS[station].items.map((entry) => Number(entry.order) || 0)) + 1;
   item = { order: nextOrder, code, name, unit };
-  items.push(item);
+  STATIONS[station].items.push(item);
   return item;
 }
 
@@ -911,7 +861,7 @@ const WEEKLY_CONVERSIONS = {
 
 // 大巨蛋的周盤順序來自店內冷凍／冷藏／乾貨母表。既有換算規則
 // 用品項代碼（無代碼時用品名）重新定位，避免沿用 101 的列號而套錯品項。
-if (KitchenStore.current?.id === "taipei-dome") {
+if (KitchenStore.current) {
   const normalizeItemName = (value) => String(value || "").toLowerCase().replace(/[\s\-_.\/()（）*×]/g, "").replace(/蕃/g, "番");
   const locateNewOrder = (station, oldOrder) => {
     const source = LEGACY_STATION_ITEMS[station]?.find((item) => String(item.order) === String(oldOrder));
@@ -984,8 +934,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
 
   // 大巨蛋 S1 已逐項確認的備料回推規則。備料表盤實際數量，
   // Weekly 站上欄則統一保存成周盤原包裝／原料主單位。
-  // 大巨蛋 S1 原始備料表列序（0 起算）。新增／調整過的品項以品名定位，
-  // 避免使用者自訂排序或新版插入品項後抓到錯誤列。
+  // 大巨蛋 S1 原始備料表列序（0 起算）；炒菇調味汁由本版附加在第 27 列。
   const cookedMushroom = 0;
   const beefJus = 20;
   const ribeye = 14;
@@ -1017,7 +966,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
     { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
-    { targetCode: "", targetName: "玉米糖膠液", sourceName: "玉米糖膠", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
+    { targetCode: "", targetName: "玉米糖膠液", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
     { targetCode: "168021SS", targetName: "大漢板豆腐", sources: [[10, 1]], note: "切豆腐：備料1盒回推大漢板豆腐1盒" },
     { targetCode: "141001SS", targetName: "牛蕃茄", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
     { targetCode: "143001SS", targetName: "奶油萵苣", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
@@ -1031,9 +980,9 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "161014SS", targetName: "法式芥", sources: [[17, 0.17]], note: "蛋刷醬：每盒含法式芥末子醬170g，回推1kg／罐的0.17罐" },
     { targetCode: "184010SS", targetName: "玉米粉", sources: [[17, 70 / 375]], note: "蛋刷醬：每盒含玉米粉70g，回推375g／盒" },
     { targetName: "殺菌蛋白液", sources: [[17, 100 / 970]], note: "蛋刷醬：每盒含蛋白液100g，回推970g／罐" },
-    { targetCode: "162023SS", targetName: "巴沙米可醋", sourceName: "炒菇調味汁", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
-    { targetCode: "162001SS", targetName: "瑪薩拉", sourceName: "炒菇調味汁", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
-    { targetCode: "161004SS", targetName: "料理白酒", sourceName: "炒菇調味汁", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
+    { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
+    { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
+    { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
     { targetCode: s1SalmonItem.code, targetName: "鮭魚菲力", sourceName: "切鮭魚", sources: [[8, 1]], note: "切鮭魚：備料盤份；1份回推鮭魚菲力1個" },
   ].filter((rule) => {
     if (rule.sourcesAny) return rule.sourcesAny.some((index) => index >= 0);
@@ -1078,7 +1027,6 @@ if (KitchenStore.current?.id === "taipei-dome") {
   const plainCreamRow = 36;
   const sweetenedCreamRow = 37;
   const mixedGreensRow = 43;
-  const domeColdRulesStart = PREP_TO_WEEKLY.cold.length;
   PREP_TO_WEEKLY.cold.push(
     { targetCode: "161008SS", targetName: "羅旺子醬", sources: [[mintSauceRow, 20 / 454]], note: "薄荷醬：每盒（1倍）含羅望子醬20g；454g／瓶" },
     { targetCode: "CKC000025", targetName: "帕達諾起司粉", sources: [[mintSauceRow, 24 / 1000]], note: "薄荷醬：每盒（1倍）含帕達諾起司粉24g；1000g／袋" },
@@ -1103,20 +1051,6 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "142020SS", targetName: "羽衣甘藍", sources: [[mixedGreensRow, 300 / 1700 / 1000]], note: "混合生菜：每1700g含羽衣甘藍300g；盤點成品g後回推kg" },
     { targetCode: "142044SS", targetName: "截切美生菜3*3公分", sources: [[mixedGreensRow, 1400 / 1700 / 1000]], note: "混合生菜：每1700g含截切美生菜1400g；盤點成品g後回推kg" },
   );
-  const domeColdSourceNames = {
-    [mintSauceRow]: "薄荷醬",
-    [pickledCucumberRow]: "醃漬小黃瓜丁",
-    [pickledApricotRow]: "醃漬杏桃丁",
-    [dicedRedPepperRow]: "紅椒丁",
-    [plainCreamRow]: "鮮奶油",
-    [sweetenedCreamRow]: "有糖鮮奶油",
-    [mixedGreensRow]: "混合生菜",
-  };
-  PREP_TO_WEEKLY.cold.slice(domeColdRulesStart).forEach((rule) => {
-    rule.sourceNames = Object.fromEntries(
-      rule.sources.map(([rowIndex]) => [rowIndex, domeColdSourceNames[rowIndex]])
-    );
-  });
 
   WEEKLY_CONVERSIONS.s1[52] = { storageFactor: 1, stationFactor: 1 / 970, storageUnit: "罐", stationUnit: "g", note: "站上盤重量；970g＝1罐" };
   WEEKLY_CONVERSIONS.s1[53] = { storageFactor: 1, stationFactor: 1 / 970, storageUnit: "罐", stationUnit: "g", note: "站上盤重量；970g＝1罐" };
@@ -1133,29 +1067,6 @@ function storageKey(station) {
 function loadInventory(station) {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey(station)) || "{}");
-    if (station === "s1" && saved && typeof saved === "object") {
-      const salmonItem = STATIONS.s1.items.find((item) =>
-        item.code === "131002SS" || item.name.includes("鮭魚菲力")
-      );
-      if (salmonItem) {
-        // v4：舊版新增的重複鮭魚通常位於清單末端。將其備料回推值
-        // 移回原本鮭魚列，再移除孤立資料；人工數字則採較大值保留。
-        Object.keys(saved).forEach((order) => {
-          if (String(order) === String(salmonItem.order)) return;
-          const old = saved[order];
-          if (!old || typeof old !== "object" || !/鮭魚|切鮭魚/.test(old.prepNote || "")) return;
-          const current = saved[salmonItem.order] ||= {};
-          current.station = old.station ?? current.station ?? "";
-          current.manualStation = old.manualStation ?? current.manualStation ?? "0";
-          current.prepValue = old.prepValue ?? current.prepValue ?? old.station ?? "";
-          current.prepLinked = true;
-          current.prepDate = old.prepDate ?? current.prepDate;
-          current.prepNote = old.prepNote ?? "切鮭魚：備料盤份；1份回推鮭魚菲力1個";
-          delete saved[order];
-        });
-        localStorage.setItem(storageKey(station), JSON.stringify(saved));
-      }
-    }
     return saved && typeof saved === "object" ? saved : {};
   } catch {
     return {};
@@ -1567,25 +1478,19 @@ async function loadPrepInventory() {
       let converted = 0;
       if (rule.sourcesAny) {
         const matchedIndex = rule.sourcesAny.find((rowIndex) => {
-          const hasNamedRows = saved.rows.some((row) => String(row?.name || "").trim());
-          const namedRow = findSavedPrepRow(saved.rows, station, rowIndex, rule.sourceNames?.[rowIndex] || rule.sourceName);
-          const raw = hasNamedRows ? namedRow?.actual : saved.rows[rowIndex]?.actual;
+          const raw = saved.rows[rowIndex]?.actual;
           return raw !== "" && raw != null && Number.isFinite(Number(raw));
         });
         if (matchedIndex != null) {
-          const hasNamedRows = saved.rows.some((row) => String(row?.name || "").trim());
-          const namedRow = findSavedPrepRow(saved.rows, station, matchedIndex, rule.sourceNames?.[matchedIndex] || rule.sourceName);
           hasValue = true;
-          converted = toNumber(hasNamedRows ? namedRow?.actual : saved.rows[matchedIndex]?.actual) * rule.factor;
+          converted = toNumber(saved.rows[matchedIndex]?.actual) * rule.factor;
         }
       } else {
         converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
-          const hasNamedRows = saved.rows.some((row) => String(row?.name || "").trim());
-          const namedRow = findSavedPrepRow(saved.rows, station, rowIndex, rule.sourceNames?.[rowIndex] || rule.sourceName);
-          // 新版存檔已有備料品名時，必須用品名命中；不可再退回固定列號，
-          // 否則備料表增刪後會把同列的其他品項誤當成來源。
-          // 只有非常舊、整份 rows 都沒有 name 的存檔才沿用列號相容。
-          const raw = hasNamedRows ? namedRow?.actual : saved.rows[rowIndex]?.actual;
+          const namedRow = rule.sourceName
+            ? saved.rows.find((row) => String(row?.name || "").includes(rule.sourceName))
+            : null;
+          const raw = namedRow?.actual ?? saved.rows[rowIndex]?.actual;
           if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
           return sum + toNumber(raw) * factor;
         }, 0);
@@ -1612,9 +1517,7 @@ async function loadPrepInventory() {
     // 舊版曾把 10 盒換成 10000g 寫入；當天備料未盤玉米糖膠時應歸零。
     if (station === "s1") {
       const cornRule = rules.find((rule) => /玉米糖膠/.test(rule.targetName || rule.note || ""));
-      const hasNamedRows = saved.rows.some((row) => String(row?.name || "").trim());
-      const cornNamedRow = saved.rows.find((row) => /玉米糖膠/.test(String(row?.name || "")));
-      const cornRaw = hasNamedRows ? cornNamedRow?.actual : saved.rows?.[3]?.actual;
+      const cornRaw = saved.rows?.[3]?.actual;
       const cornOrder = cornRule ? resolveTargetOrder(station, cornRule) : null;
       const cornCurrent = cornOrder == null ? null : stationInventory[cornOrder];
       const cornWasNotCounted = cornRaw === "" || cornRaw == null || !Number.isFinite(Number(cornRaw));

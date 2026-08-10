@@ -8,7 +8,7 @@ function norm(value){return String(value||"").toLowerCase().replace(/[\\s\\-_.\\
 function unitLabel(unit){return unit||"未設定";}
 function findMaster(name){const n=norm(name);if(!n)return null;return DATA.weeklyMaster.find(x=>{const m=norm(x.name);return m===n||m.includes(n)||n.includes(m)})||null;}
 window.KitchenStoreDefaults={
-applyDaily(centralData,prepData){if(window.KitchenStore?.current?.id!=="taipei-dome")return;for(const station of Object.keys(DATA.central)){centralData[station]=DATA.central[station].map((r,i)=>{const master=findMaster(r[0]);return [r[0],unitLabel(r[1]),master?.location||"未分類",null,0,i+1]});prepData[station]=DATA.prep[station].map(r=>[r[0],unitLabel(r[1]),r[2]||"未設定"]);}},
-applyWeekly(stations){if(window.KitchenStore?.current?.id!=="taipei-dome")return;for(const station of Object.keys(stations)){if(!DOME_WEEKLY[station])continue;stations[station].items=DOME_WEEKLY[station].map(item=>({...item}));}}
+applyDaily(centralData,prepData){if(!window.KitchenStore?.current)return;for(const station of Object.keys(DATA.central)){centralData[station]=DATA.central[station].map((r,i)=>{const master=findMaster(r[0]);return [r[0],unitLabel(r[1]),master?.location||"未分類",null,0,i+1]});prepData[station]=DATA.prep[station].map(r=>[r[0],unitLabel(r[1]),r[2]||"未設定"]);}},
+applyWeekly(stations){if(!window.KitchenStore?.current)return;for(const station of Object.keys(stations)){if(!DOME_WEEKLY[station])continue;stations[station].items=DOME_WEEKLY[station].map(item=>({...item}));}}
 };
 })();
