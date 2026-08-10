@@ -399,7 +399,13 @@ const PREP_TO_WEEKLY = {
     { order: 37, sources: [[18, 0.25], [24, 0.25]] },
     { order: 38, sources: [[3, 0.03]] },
     { order: 40, sources: [[2, 0.03]] },
-    { order: 41, sources: [[1, 0.7]] },
+    {
+      targetCode: "142044SS",
+      targetName: "截切美生菜3*3公分",
+      order: 32,
+      sources: [[1, 0.7]],
+      note: "美生菜：每盒700g，回推截切美生菜3*3公分0.7kg",
+    },
     { order: 43, sources: [[0, 0.3]] },
     { order: 55, sources: [[20, 0.25]] },
     { order: 56, sources: [[21, 0.25]] },
@@ -914,6 +920,9 @@ if (KitchenStore.current?.id === "taipei-dome") {
   const pickledCucumberRow = 31;
   const pickledApricotRow = 32;
   const dicedRedPepperRow = 34;
+  const plainCreamRow = 36;
+  const sweetenedCreamRow = 37;
+  const mixedGreensRow = 43;
   PREP_TO_WEEKLY.cold.push(
     { targetCode: "161008SS", targetName: "羅旺子醬", sources: [[mintSauceRow, 20 / 374 / 454]], note: "薄荷醬：374g成品含羅望子醬20g；454g／瓶" },
     { targetCode: "CKC000025", targetName: "帕達諾起司粉", sources: [[mintSauceRow, 24 / 374 / 1000]], note: "薄荷醬：374g成品含帕達諾起司粉24g；1000g／袋" },
@@ -934,6 +943,9 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "168007SS", targetName: "杏桃乾", sources: [[pickledApricotRow, 0.5 / 1000]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；杏桃乾1000g／袋" },
     { targetCode: "CKH000042", targetName: "醃杏桃醋汁", sources: [[pickledApricotRow, 0.5 / 100]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；醋汁100g／袋" },
     { targetCode: "181005SS", targetName: "紅椒", sources: [[dicedRedPepperRow, 1 / 1000]], note: "紅椒丁：盤點g ÷ 1000＝紅椒kg" },
+    { targetCode: "173003CK", targetName: "艾樂薇 35%動物鮮奶油", sources: [[plainCreamRow, 0.5], [sweetenedCreamRow, 0.45]], note: "鮮奶油：每桶500g回推0.5瓶；有糖鮮奶油每桶含450g鮮奶油，回推0.45瓶" },
+    { targetCode: "142020SS", targetName: "羽衣甘藍", sources: [[mixedGreensRow, 300 / 1700 / 1000]], note: "混合生菜：每1700g含羽衣甘藍300g；盤點成品g後回推kg" },
+    { targetCode: "142044SS", targetName: "截切美生菜3*3公分", sources: [[mixedGreensRow, 1400 / 1700 / 1000]], note: "混合生菜：每1700g含截切美生菜1400g；盤點成品g後回推kg" },
   );
 
   WEEKLY_CONVERSIONS.s1[52] = { storageFactor: 1, stationFactor: 1 / 970, storageUnit: "罐", stationUnit: "g", note: "站上盤重量；970g＝1罐" };
