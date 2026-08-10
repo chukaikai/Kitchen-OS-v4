@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-cold-cream-greens-v1';
+const CACHE_NAME = 'kitchen-os-v41-weekly-prep-auto-sync-v1';
 
 const ASSETS = [
   './',

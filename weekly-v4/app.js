@@ -1645,7 +1645,13 @@ renderItems();
 setTableHead("station");
 inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);
+inventoryDate.addEventListener("change", loadPrepInventory);
 itemSettingsButton.addEventListener("click", () => {
   if (activeStation === "summary" || activeStation === "produce") return alert("請先選擇 S1、S2、Pizza 或 Cold。");
   KitchenItemSettings.openManager("weekly", activeStation, BASE_STATION_ITEMS[activeStation], () => location.reload());
 });
+
+// 進入 Weekly 時立即以今天的備料存檔重新同步。
+// 沒有當日存檔時，loadPrepInventory 仍會清除前一次留下的備料回推值，
+// 因此使用者不需要再手動按「抓取並換算站上庫存」才能歸零。
+loadPrepInventory();
