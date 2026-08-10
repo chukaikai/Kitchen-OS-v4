@@ -332,6 +332,11 @@ const firebaseConfig = {
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true }).catch((error) => {
+  if (error?.code !== "failed-precondition" && error?.code !== "unimplemented") {
+    console.warn("離線同步暫存未啟用", error);
+  }
+});
 
 // 每一條規則：Weekly 品項順序、備料表列號（由 0 開始）、換算倍率。
 // 同一品項可加總多個備料列。S2 墨魚絲依確認規格採 1 盒＝10 份、300g／盒。
@@ -1068,6 +1073,9 @@ if (KitchenStore.current) {
 let activeStation = "cold";
 let inventory = loadInventory(activeStation);
 let saveTimer;
+let cloudSaveTimer;
+const weeklyUnsubscribers = new Map();
+const dirtyWeeklyFields = new Set();
 
 function storageKey(station) {
   return `kitchen-os-v4.1:101:${station}:weekly`;
@@ -1347,6 +1355,9 @@ function renderProduce() {
 
 function saveInventory() {
   localStorage.setItem(storageKey(activeStation), JSON.stringify(inventory));
+  const stationToSave = activeStation;
+  window.clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = window.setTimeout(() => syncWeeklyToCloud(stationToSave), 350);
   saveState.textContent = "已自動儲存";
   saveState.style.background = "rgb(255 255 255 / 15%)";
   window.clearTimeout(saveTimer);
@@ -1354,6 +1365,63 @@ function saveInventory() {
     saveState.textContent = "資料已保存";
     saveState.style.background = "";
   }, 1200);
+}
+
+function weeklyCloudRef(station) {
+  return db.collection("weeklyInventory").doc(KitchenStore.cloudId(`${station}-weekly`));
+}
+
+async function syncWeeklyToCloud(station, fullInventory = null) {
+  if (station === "summary") return;
+  const stationInventory = fullInventory || loadInventory(station);
+  const payload = {
+    storeId: KitchenStore.current.id,
+    station,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+  if (fullInventory) {
+    payload.inventory = stationInventory;
+  } else {
+    payload.inventory = {};
+    [...dirtyWeeklyFields].forEach((path) => {
+      const [dirtyStation, order, field] = path.split("|");
+      if (dirtyStation !== station) return;
+      payload.inventory[order] ||= {};
+      payload.inventory[order][field] = stationInventory?.[order]?.[field] ?? "";
+      dirtyWeeklyFields.delete(path);
+    });
+    if (!Object.keys(payload.inventory).length) return;
+  }
+  try {
+    await weeklyCloudRef(station).set(payload, { merge: true });
+  } catch (error) {
+    console.warn("Weekly 雲端同步暫緩，保留本機資料", error);
+  }
+}
+
+function startWeeklyRealtime(station) {
+  if (weeklyUnsubscribers.has(station)) return;
+  let receivedFirstSnapshot = false;
+  const unsubscribe = weeklyCloudRef(station).onSnapshot({ includeMetadataChanges: true }, (snap) => {
+    if (snap.metadata.hasPendingWrites) return;
+    if (!snap.exists) {
+      if (!receivedFirstSnapshot) {
+        receivedFirstSnapshot = true;
+        const localInventory = loadInventory(station);
+        if (Object.keys(localInventory).length) syncWeeklyToCloud(station, localInventory);
+      }
+      return;
+    }
+    receivedFirstSnapshot = true;
+    const cloudInventory = snap.data()?.inventory;
+    if (!cloudInventory || typeof cloudInventory !== "object") return;
+    localStorage.setItem(storageKey(station), JSON.stringify(cloudInventory));
+    if (station !== activeStation) return;
+    inventory = cloudInventory;
+    if (!inventoryBody.querySelector(".number-input:focus")) renderItems();
+    saveState.textContent = "已收到其他裝置更新";
+  }, (error) => console.warn("Weekly 即時監聽暫停", error));
+  weeklyUnsubscribers.set(station, unsubscribe);
 }
 
 function createNumberInput(item, field) {
@@ -1467,6 +1535,7 @@ async function loadPrepInventory() {
     if (!saved?.rows) {
       missingStations += 1;
       localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
+      await syncWeeklyToCloud(station, stationInventory);
       continue;
     }
     // v18 修正：舊版曾將 S2 甘蔥碎誤寫到第 41 項白米。
@@ -1583,6 +1652,7 @@ async function loadPrepInventory() {
       }
     }
     localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
+    await syncWeeklyToCloud(station, stationInventory);
   }
 
   inventory = loadInventory(activeStation);
@@ -1712,6 +1782,7 @@ inventoryBody.addEventListener("input", (event) => {
     const order = input.dataset.produceOrder;
     inventory[order] ||= {};
     inventory[order].quantity = input.value;
+    dirtyWeeklyFields.add(`${activeStation}|${order}|quantity`);
     const item = AFTERNOON_PRODUCE_ITEMS.find((entry) => String(entry.order) === order);
     const totalCell = inventoryBody.querySelector(`[data-produce-total-for="${order}"]`);
     if (item && totalCell) {
@@ -1725,6 +1796,7 @@ inventoryBody.addEventListener("input", (event) => {
   const field = input.dataset.field;
   inventory[order] ||= {};
   inventory[order][field] = input.value;
+  dirtyWeeklyFields.add(`${activeStation}|${order}|${field}`);
   updateTotal(order);
   saveInventory();
 });
@@ -1752,6 +1824,7 @@ stationTabs.addEventListener("click", (event) => {
   if (!tab || tab.dataset.station === activeStation) return;
 
   activeStation = tab.dataset.station;
+  if (activeStation !== "summary") startWeeklyRealtime(activeStation);
   if (activeStation !== "summary") inventory = loadInventory(activeStation);
   searchInput.value = "";
   document.querySelectorAll(".station-tab").forEach((button) => {
@@ -1772,6 +1845,7 @@ stationTabs.addEventListener("click", (event) => {
 });
 
 renderItems();
+["cold", "s1", "s2", "pizza", "produce"].forEach(startWeeklyRealtime);
 setTableHead("station");
 inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);
