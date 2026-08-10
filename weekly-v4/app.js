@@ -891,6 +891,51 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
   ].filter((rule) => rule.sources.every(([index]) => index >= 0));
 
+  // 大巨蛋 Cold 新增四項備料回推。備料表皆盤成品實際重量 g；
+  // 薄荷醬配方總重為 374g，綠檸檬皮包含在成品重量中但不回推原料。
+  const ensureColdWeeklyItem = (code, name, unit) => {
+    let item = STATIONS.cold.items.find((entry) => entry.code === code);
+    if (item) return item;
+    const nextOrder = Math.max(0, ...STATIONS.cold.items.map((entry) => Number(entry.order) || 0)) + 1;
+    item = { order: nextOrder, code, name, unit };
+    STATIONS.cold.items.push(item);
+    return item;
+  };
+  const coldParmesanPowder = ensureColdWeeklyItem("CKC000025", "帕達諾起司粉 1000G/BAG", "Bag / 袋");
+  ensureColdWeeklyItem("162006SS", "精鹽/ KG", "Kg / 公斤");
+  const coldOliveOil = ensureColdWeeklyItem("163011CK", "西班牙初榨橄欖油 3L/瓶", "Btl / 瓶");
+  ensureColdWeeklyItem("142019SS", "蒜仁-大 /公斤", "Kg / 公斤");
+  ensureColdWeeklyItem("cold-orange", "柳橙/公斤", "Kg / 公斤");
+  ensureColdWeeklyItem("cold-white-vinegar", "亨氏白醋/公斤", "Kg / 公斤");
+  WEEKLY_CONVERSIONS.cold[coldParmesanPowder.order] = { storageFactor: 1, stationFactor: 1 / 1000, storageUnit: "袋", stationUnit: "g", note: "站上盤重量；1000g＝1袋" };
+  WEEKLY_CONVERSIONS.cold[coldOliveOil.order] = { storageFactor: 1, stationFactor: 1 / 2760, storageUnit: "瓶", stationUnit: "g", note: "站上盤重量；3L橄欖油按淨重2760g＝1瓶" };
+
+  const mintSauceRow = 30;
+  const pickledCucumberRow = 31;
+  const pickledApricotRow = 32;
+  const dicedRedPepperRow = 34;
+  PREP_TO_WEEKLY.cold.push(
+    { targetCode: "161008SS", targetName: "羅旺子醬", sources: [[mintSauceRow, 20 / 374 / 454]], note: "薄荷醬：374g成品含羅望子醬20g；454g／瓶" },
+    { targetCode: "CKC000025", targetName: "帕達諾起司粉", sources: [[mintSauceRow, 24 / 374 / 1000]], note: "薄荷醬：374g成品含帕達諾起司粉24g；1000g／袋" },
+    { targetCode: "162039SS", targetName: "小茴香粉", sources: [[mintSauceRow, 12 / 374 / 300]], note: "薄荷醬：374g成品含小茴香粉12g；300g／罐" },
+    { targetCode: "162006SS", targetName: "精鹽", sources: [[mintSauceRow, 6 / 374 / 1000]], note: "薄荷醬：374g成品含鹽6g；回推kg" },
+    { targetCode: "163011CK", targetName: "初榨橄欖油", sources: [[mintSauceRow, 150 / 374 / 2760]], note: "薄荷醬：374g成品含初榨橄欖油150g；2760g／瓶" },
+    { targetCode: "cold-orange", targetName: "柳橙", sources: [[mintSauceRow, 100 / 374 / 1000]], note: "薄荷醬：374g成品含柳橙丁100g；回推kg" },
+    { targetCode: "145003SS", targetName: "薄荷", sources: [[mintSauceRow, 30 / 374 / 1000]], note: "薄荷醬：374g成品含薄荷30g；回推kg" },
+    { targetCode: "181003SS", targetName: "平葉巴西里", sources: [[mintSauceRow, 10 / 374 / 1000]], note: "薄荷醬：374g成品含平葉巴西里10g；回推kg" },
+    { targetCode: "145009SS", targetName: "香菜", sources: [[mintSauceRow, 10 / 374 / 1000]], note: "薄荷醬：374g成品含香菜10g；回推kg" },
+    { targetCode: "142019SS", targetName: "蒜仁", sources: [[mintSauceRow, 10 / 374 / 1000]], note: "薄荷醬：374g成品含蒜泥10g；回推蒜仁kg；綠檸檬皮不回推" },
+    { targetCode: "142012SS", targetName: "小黃瓜", sources: [[pickledCucumberRow, 100 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含小黃瓜100g；回推kg" },
+    { targetCode: "162006SS", targetName: "精鹽", sources: [[pickledCucumberRow, 5 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含鹽5g；回推kg" },
+    { targetCode: "185010SS", targetName: "純糖粉", sources: [[pickledCucumberRow, 1 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含糖1g；1000g／袋" },
+    { targetCode: "142019SS", targetName: "蒜仁", sources: [[pickledCucumberRow, 10 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含蒜泥10g；回推蒜仁kg" },
+    { targetCode: "142004SS", targetName: "乾蔥", sources: [[pickledCucumberRow, 10 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含甘蔥碎10g；回推乾蔥kg" },
+    { targetCode: "cold-white-vinegar", targetName: "亨氏白醋", sources: [[pickledCucumberRow, 20 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含亨氏白醋20g；回推kg" },
+    { targetCode: "168007SS", targetName: "杏桃乾", sources: [[pickledApricotRow, 0.5 / 1000]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；杏桃乾1000g／袋" },
+    { targetCode: "CKH000042", targetName: "醃杏桃醋汁", sources: [[pickledApricotRow, 0.5 / 100]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；醋汁100g／袋" },
+    { targetCode: "181005SS", targetName: "紅椒", sources: [[dicedRedPepperRow, 1 / 1000]], note: "紅椒丁：盤點g ÷ 1000＝紅椒kg" },
+  );
+
   WEEKLY_CONVERSIONS.s1[52] = { storageFactor: 1, stationFactor: 1 / 970, storageUnit: "罐", stationUnit: "g", note: "站上盤重量；970g＝1罐" };
   WEEKLY_CONVERSIONS.s1[53] = { storageFactor: 1, stationFactor: 1 / 970, storageUnit: "罐", stationUnit: "g", note: "站上盤重量；970g＝1罐" };
 }
