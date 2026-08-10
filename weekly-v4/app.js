@@ -505,11 +505,27 @@ const PREP_TO_WEEKLY = {
 // Pizza 蔬菜備料也必須回到該站周盤；若店鋪舊設定尚未含這些列，補入
 // 正確原料，儲位仍由下午蔬菜統一盤，站上只承接備料回推與人工盤點。
 function ensureStationWeeklyItem(station, code, name, unit) {
-  let item = STATIONS[station].items.find((entry) => entry.code === code);
-  if (item) return item;
+  const items = STATIONS[station].items;
+  const normalizedName = String(name || "").replace(/[\s\-()（）/]/g, "").toLowerCase();
+  const matches = items.filter((entry) => {
+    const entryName = String(entry.name || "").replace(/[\s\-()（）/]/g, "").toLowerCase();
+    return (code && entry.code === code) ||
+      (normalizedName && (entryName === normalizedName || entryName.includes(normalizedName) || normalizedName.includes(entryName)));
+  });
+  let item = matches[0];
+  if (item) {
+    Object.assign(item, { code, name, unit });
+    // 舊版可能先以品名加入一列、後續又因代碼未命中再新增一列。
+    // 保留原本排序最前的品項，移除同站重複列。
+    matches.slice(1).forEach((duplicate) => {
+      const index = items.indexOf(duplicate);
+      if (index >= 0) items.splice(index, 1);
+    });
+    return item;
+  }
   const nextOrder = Math.max(0, ...STATIONS[station].items.map((entry) => Number(entry.order) || 0)) + 1;
   item = { order: nextOrder, code, name, unit };
-  STATIONS[station].items.push(item);
+  items.push(item);
   return item;
 }
 
@@ -1067,6 +1083,29 @@ function storageKey(station) {
 function loadInventory(station) {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey(station)) || "{}");
+    if (station === "s1" && saved && typeof saved === "object") {
+      const salmonItem = STATIONS.s1.items.find((item) =>
+        item.code === "131002SS" || item.name.includes("鮭魚菲力")
+      );
+      if (salmonItem) {
+        // v4：舊版新增的重複鮭魚通常位於清單末端。將其備料回推值
+        // 移回原本鮭魚列，再移除孤立資料；人工數字則採較大值保留。
+        Object.keys(saved).forEach((order) => {
+          if (String(order) === String(salmonItem.order)) return;
+          const old = saved[order];
+          if (!old || typeof old !== "object" || !/鮭魚|切鮭魚/.test(old.prepNote || "")) return;
+          const current = saved[salmonItem.order] ||= {};
+          current.station = old.station ?? current.station ?? "";
+          current.manualStation = old.manualStation ?? current.manualStation ?? "0";
+          current.prepValue = old.prepValue ?? current.prepValue ?? old.station ?? "";
+          current.prepLinked = true;
+          current.prepDate = old.prepDate ?? current.prepDate;
+          current.prepNote = old.prepNote ?? "切鮭魚：備料盤份；1份回推鮭魚菲力1個";
+          delete saved[order];
+        });
+        localStorage.setItem(storageKey(station), JSON.stringify(saved));
+      }
+    }
     return saved && typeof saved === "object" ? saved : {};
   } catch {
     return {};

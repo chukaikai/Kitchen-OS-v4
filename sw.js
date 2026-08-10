@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-s1-beefjus-tofuveg-v3';
+const CACHE_NAME = 'kitchen-os-v41-s1-salmon-dedupe-v4';
 
 const ASSETS = [
   './',
