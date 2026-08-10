@@ -879,12 +879,15 @@ if (KitchenStore.current?.id === "taipei-dome") {
   // Weekly 站上欄則統一保存成周盤原包裝／原料主單位。
   // 大巨蛋 S1 原始備料表列序（0 起算）；炒菇調味汁由本版附加在第 27 列。
   const cookedMushroom = 0;
-  const beefJus = 14;
-  const ribeye = 15;
-  const potato = 16;
-  const lamb = 17;
+  const beefJus = 20;
+  const ribeye = 14;
+  const potato = 15;
+  const lamb = 13;
   const mushroomSauce = 26;
   PREP_TO_WEEKLY.s1 = [
+    { targetCode: "CKM000002", targetName: "舒肥牛小排", sources: [[16, 0.21]], note: "分牛小排：備料盤份；每份210g＝0.21kg" },
+    { targetCode: "CKM000001", targetName: "舒肥牛肋條", sources: [[7, 0.11]], note: "分牛肋條：備料盤份；每份110g＝0.11kg" },
+    { targetCode: "CKMM000001", targetName: "舒肥雞腿", sources: [[6, 0.11]], note: "分雞腿：備料盤份；每份110g＝0.11kg" },
     { targetCode: "142016SS", targetName: "香菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
     { targetCode: "142015SS", targetName: "蘑菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
     { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
@@ -897,8 +900,9 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
   ].filter((rule) => rule.sources.every(([index]) => index >= 0));
 
-  // 大巨蛋 Cold 新增四項備料回推。備料表皆盤成品實際重量 g；
-  // 薄荷醬配方總重為 374g，綠檸檬皮包含在成品重量中但不回推原料。
+  // 大巨蛋 Cold 新增四項備料回推。
+  // 薄荷醬在備料表盤「盒／倍數」：1盒就是完整1倍配方（374g）。
+  // 其餘三項盤成品實際重量 g；綠檸檬皮不回推原料。
   const ensureColdWeeklyItem = (code, name, unit) => {
     let item = STATIONS.cold.items.find((entry) => entry.code === code);
     if (item) return item;
@@ -924,16 +928,16 @@ if (KitchenStore.current?.id === "taipei-dome") {
   const sweetenedCreamRow = 37;
   const mixedGreensRow = 43;
   PREP_TO_WEEKLY.cold.push(
-    { targetCode: "161008SS", targetName: "羅旺子醬", sources: [[mintSauceRow, 20 / 374 / 454]], note: "薄荷醬：374g成品含羅望子醬20g；454g／瓶" },
-    { targetCode: "CKC000025", targetName: "帕達諾起司粉", sources: [[mintSauceRow, 24 / 374 / 1000]], note: "薄荷醬：374g成品含帕達諾起司粉24g；1000g／袋" },
-    { targetCode: "162039SS", targetName: "小茴香粉", sources: [[mintSauceRow, 12 / 374 / 300]], note: "薄荷醬：374g成品含小茴香粉12g；300g／罐" },
-    { targetCode: "162006SS", targetName: "精鹽", sources: [[mintSauceRow, 6 / 374 / 1000]], note: "薄荷醬：374g成品含鹽6g；回推kg" },
-    { targetCode: "163011CK", targetName: "初榨橄欖油", sources: [[mintSauceRow, 150 / 374 / 2760]], note: "薄荷醬：374g成品含初榨橄欖油150g；2760g／瓶" },
-    { targetCode: "cold-orange", targetName: "柳橙", sources: [[mintSauceRow, 100 / 374 / 1000]], note: "薄荷醬：374g成品含柳橙丁100g；回推kg" },
-    { targetCode: "145003SS", targetName: "薄荷", sources: [[mintSauceRow, 30 / 374 / 1000]], note: "薄荷醬：374g成品含薄荷30g；回推kg" },
-    { targetCode: "181003SS", targetName: "平葉巴西里", sources: [[mintSauceRow, 10 / 374 / 1000]], note: "薄荷醬：374g成品含平葉巴西里10g；回推kg" },
-    { targetCode: "145009SS", targetName: "香菜", sources: [[mintSauceRow, 10 / 374 / 1000]], note: "薄荷醬：374g成品含香菜10g；回推kg" },
-    { targetCode: "142019SS", targetName: "蒜仁", sources: [[mintSauceRow, 10 / 374 / 1000]], note: "薄荷醬：374g成品含蒜泥10g；回推蒜仁kg；綠檸檬皮不回推" },
+    { targetCode: "161008SS", targetName: "羅旺子醬", sources: [[mintSauceRow, 20 / 454]], note: "薄荷醬：每盒（1倍）含羅望子醬20g；454g／瓶" },
+    { targetCode: "CKC000025", targetName: "帕達諾起司粉", sources: [[mintSauceRow, 24 / 1000]], note: "薄荷醬：每盒（1倍）含帕達諾起司粉24g；1000g／袋" },
+    { targetCode: "162039SS", targetName: "小茴香粉", sources: [[mintSauceRow, 12 / 300]], note: "薄荷醬：每盒（1倍）含小茴香粉12g；300g／罐" },
+    { targetCode: "162006SS", targetName: "精鹽", sources: [[mintSauceRow, 6 / 1000]], note: "薄荷醬：每盒（1倍）含鹽6g；回推kg" },
+    { targetCode: "163011CK", targetName: "初榨橄欖油", sources: [[mintSauceRow, 150 / 2760]], note: "薄荷醬：每盒（1倍）含初榨橄欖油150g；2760g／瓶" },
+    { targetCode: "cold-orange", targetName: "柳橙", sources: [[mintSauceRow, 100 / 1000]], note: "薄荷醬：每盒（1倍）含柳橙丁100g；回推kg" },
+    { targetCode: "145003SS", targetName: "薄荷", sources: [[mintSauceRow, 30 / 1000]], note: "薄荷醬：每盒（1倍）含薄荷30g；回推kg" },
+    { targetCode: "181003SS", targetName: "平葉巴西里", sources: [[mintSauceRow, 10 / 1000]], note: "薄荷醬：每盒（1倍）含平葉巴西里10g；回推kg" },
+    { targetCode: "145009SS", targetName: "香菜", sources: [[mintSauceRow, 10 / 1000]], note: "薄荷醬：每盒（1倍）含香菜10g；回推kg" },
+    { targetCode: "142019SS", targetName: "蒜仁", sources: [[mintSauceRow, 10 / 1000]], note: "薄荷醬：每盒（1倍）含蒜泥10g；回推蒜仁kg；綠檸檬皮不回推" },
     { targetCode: "142012SS", targetName: "小黃瓜", sources: [[pickledCucumberRow, 100 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含小黃瓜100g；回推kg" },
     { targetCode: "162006SS", targetName: "精鹽", sources: [[pickledCucumberRow, 5 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含鹽5g；回推kg" },
     { targetCode: "185010SS", targetName: "純糖粉", sources: [[pickledCucumberRow, 1 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含糖1g；1000g／袋" },
