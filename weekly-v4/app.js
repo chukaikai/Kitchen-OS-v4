@@ -982,7 +982,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
     { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
-    { targetCode: "", targetName: "玉米糖膠液", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
+    { targetCode: "", targetName: "玉米糖膠液", sourceName: "玉米糖膠", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
     { targetCode: "168021SS", targetName: "大漢板豆腐", sources: [[10, 1]], note: "切豆腐：備料1盒回推大漢板豆腐1盒" },
     { targetCode: "141001SS", targetName: "牛蕃茄", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
     { targetCode: "143001SS", targetName: "奶油萵苣", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
@@ -1526,10 +1526,16 @@ async function loadPrepInventory() {
         }
       } else {
         converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
+          const hasNamedRows = saved.rows.some((row) => String(row?.name || "").trim());
           const namedRow = rule.sourceName
             ? saved.rows.find((row) => String(row?.name || "").includes(rule.sourceName))
             : null;
-          const raw = namedRow?.actual ?? saved.rows[rowIndex]?.actual;
+          // 新版存檔已有備料品名時，必須用品名命中；不可再退回固定列號，
+          // 否則備料表增刪後會把同列的其他品項誤當成來源。
+          // 只有非常舊、整份 rows 都沒有 name 的存檔才沿用列號相容。
+          const raw = rule.sourceName && hasNamedRows
+            ? namedRow?.actual
+            : (namedRow?.actual ?? saved.rows[rowIndex]?.actual);
           if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
           return sum + toNumber(raw) * factor;
         }, 0);
@@ -1556,7 +1562,9 @@ async function loadPrepInventory() {
     // 舊版曾把 10 盒換成 10000g 寫入；當天備料未盤玉米糖膠時應歸零。
     if (station === "s1") {
       const cornRule = rules.find((rule) => /玉米糖膠/.test(rule.targetName || rule.note || ""));
-      const cornRaw = saved.rows?.[3]?.actual;
+      const hasNamedRows = saved.rows.some((row) => String(row?.name || "").trim());
+      const cornNamedRow = saved.rows.find((row) => /玉米糖膠/.test(String(row?.name || "")));
+      const cornRaw = hasNamedRows ? cornNamedRow?.actual : saved.rows?.[3]?.actual;
       const cornOrder = cornRule ? resolveTargetOrder(station, cornRule) : null;
       const cornCurrent = cornOrder == null ? null : stationInventory[cornOrder];
       const cornWasNotCounted = cornRaw === "" || cornRaw == null || !Number.isFinite(Number(cornRaw));
