@@ -941,6 +941,10 @@ if (KitchenStore.current?.id === "taipei-dome") {
   const potato = 15;
   const lamb = 13;
   const mushroomSauce = 26;
+  const s1SalmonItem = ensureStationWeeklyItem("s1", "131002SS", "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱", "Ea / 個");
+  const s1EggplantItem = ensureStationWeeklyItem("s1", "142018SS", "圓茄/公斤", "Kg / 公斤");
+  const s1ThymeItem = ensureStationWeeklyItem("s1", "145006SS", "百里香/公斤", "Kg / 公斤");
+  const s1RosemaryItem = ensureStationWeeklyItem("s1", "181004SS", "迷迭香/公斤", "Kg / 公斤");
   PREP_TO_WEEKLY.s1 = [
     { targetCode: "CKM000002", targetName: "舒肥牛小排", sources: [[16, 0.21]], note: "分牛小排：備料盤份；每份210g＝0.21kg" },
     { targetCode: "CKM000001", targetName: "舒肥牛肋條", sources: [[7, 0.11]], note: "分牛肋條：備料盤份；每份110g＝0.11kg" },
@@ -956,7 +960,7 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "168021SS", targetName: "大漢板豆腐", sources: [[10, 1]], note: "切豆腐：備料1盒回推大漢板豆腐1盒" },
     { targetCode: "141001SS", targetName: "牛蕃茄", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
     { targetCode: "143001SS", targetName: "奶油萵苣", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
-    { targetCode: "142018SS", targetName: "圓茄", sources: [[21, 0.28]], note: "茄子：每份回推圓茄0.28kg" },
+    { targetCode: s1EggplantItem.code, targetName: "圓茄", sources: [[21, 0.28]], note: "茄子：每份回推圓茄0.28kg" },
     { targetCode: "142028SS", targetName: "青花菜", sources: [[12, 0.03]], note: "豆腐菜包：每份含青花菜0.03kg" },
     { targetCode: "142030SS", targetName: "球芽甘藍", sources: [[12, 0.03]], note: "豆腐菜包：每份含球芽甘藍0.03kg" },
     { targetCode: "142029SS", targetName: "秋葵", sources: [[11, 0.3]], note: "切秋葵：每盒300g，回推秋葵0.3kg" },
@@ -969,9 +973,21 @@ if (KitchenStore.current?.id === "taipei-dome") {
     { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
     { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
     { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
+    { targetCode: s1SalmonItem.code, targetName: "鮭魚菲力", sources: [[8, 1]], note: "切鮭魚：備料盤份；1份回推鮭魚菲力1個" },
   ].filter((rule) => {
     if (rule.sourcesAny) return rule.sourcesAny.some((index) => index >= 0);
     return rule.sources.every(([index]) => index >= 0);
+  });
+
+  // S1 香草的站上欄盤實際重量 g，TOTAL 換算回原料 kg。
+  [s1ThymeItem, s1RosemaryItem].forEach((item) => {
+    WEEKLY_CONVERSIONS.s1[item.order] = {
+      storageFactor: 1,
+      stationFactor: 1 / 1000,
+      storageUnit: "kg",
+      stationUnit: "g",
+      note: "站上盤重量；1000g＝1kg",
+    };
   });
 
   // 大巨蛋 Cold 新增四項備料回推。
@@ -1483,6 +1499,24 @@ async function loadPrepInventory() {
       }
       linked += 1;
     });
+
+    // 清理由早期版本留下、尚未帶 prepLinked 標記的玉米糖膠錯誤值。
+    // 舊版曾把 10 盒換成 10000g 寫入；當天備料未盤玉米糖膠時應歸零。
+    if (station === "s1") {
+      const cornRule = rules.find((rule) => /玉米糖膠/.test(rule.targetName || rule.note || ""));
+      const cornRaw = saved.rows?.[3]?.actual;
+      const cornOrder = cornRule ? resolveTargetOrder(station, cornRule) : null;
+      const cornCurrent = cornOrder == null ? null : stationInventory[cornOrder];
+      const cornWasNotCounted = cornRaw === "" || cornRaw == null || !Number.isFinite(Number(cornRaw));
+      if (cornWasNotCounted && cornCurrent && toNumber(cornCurrent.station) >= 1000) {
+        cornCurrent.station = "";
+        delete cornCurrent.manualStation;
+        delete cornCurrent.prepValue;
+        delete cornCurrent.prepLinked;
+        delete cornCurrent.prepDate;
+        delete cornCurrent.prepNote;
+      }
+    }
     convertedByTarget.forEach((entry, targetOrder) => {
       addPrepValue(
         station,
