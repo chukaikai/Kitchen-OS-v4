@@ -14,6 +14,14 @@
     if(!prepData.s1.some(item=>/炒菇調味汁/.test(String(item[0]||"")))){
       prepData.s1.push(["炒菇調味汁（盤重量）","g","D+3"]);
     }
+    if(!prepData.s1.some(item=>/切鮭魚/.test(String(item[0]||"")))){
+      prepData.s1.push(["切鮭魚 110g","份","D+3"]);
+    }
+  }
+  if(window.KitchenStore?.current?.id==="taipei-dome"&&Array.isArray(prepData.s2)){
+    if(!prepData.s2.some(item=>/綠沙沙醬/.test(String(item[0]||"")))){
+      prepData.s2.push(["綠沙沙醬 450g","罐","D+3"]);
+    }
   }
   const baseCentralData={},basePrepData={};
   Object.keys(centralData).forEach(stationKey=>{

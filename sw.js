@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-s1-corn-name-v1';
+const CACHE_NAME = 'kitchen-os-v41-prep-name-key-v1';
 
 const ASSETS = [
   './',
