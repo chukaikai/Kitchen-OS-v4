@@ -10,24 +10,12 @@
   };
   const TYPES=["weekly","central","prep"];
   const STATIONS=["s1","s2","pizza","cold"];
-  let cloudRef=null;
-  let cloudUnsubscribe=null;
-  let applyingCloud=false;
   if(window.KitchenStore?.current && window.KitchenStore.current.id!=="taipei-dome" && !localStorage.getItem(UNIFIED_DEFAULTS_MARKER)){
     localStorage.removeItem(KEY);
     localStorage.setItem(UNIFIED_DEFAULTS_MARKER,"1");
   }
   function read(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){return {}}}
-  function write(data){
-    localStorage.setItem(KEY,JSON.stringify(data));
-    if(cloudRef&&!applyingCloud){
-      cloudRef.set({
-        storeId:window.KitchenStore?.current?.id||"",
-        settings:data,
-        updatedAt:window.firebase?.firestore?.FieldValue?.serverTimestamp?.()||new Date().toISOString()
-      },{merge:true}).catch(error=>console.warn("品項設定雲端同步暫緩，已保留本機設定",error));
-    }
-  }
+  function write(data){localStorage.setItem(KEY,JSON.stringify(data))}
   function key(type,station){return type+":"+station}
   function get(type,station){return read()[key(type,station)]||{order:[],hidden:[],custom:[]}}
   function set(type,station,value){const all=read();all[key(type,station)]=value;write(all)}
@@ -69,32 +57,6 @@
     function draw(){box.innerHTML='';ids.forEach((id,index)=>{const item=all.get(id),name=type==='weekly'?item.name:item[0],unit=type==='weekly'?item.unit:item[1],row=document.createElement('div');row.draggable=true;row.dataset.id=id;row.style.cssText='display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid #e3e7e4;background:#fff';row.innerHTML=`<span style="cursor:grab;font-size:20px">☰</span><input type="checkbox" ${hidden.has(id)?'':'checked'} aria-label="顯示 ${name}"><div><b>${name}</b><small style="display:block;color:#748079">${unit||'未設定單位'}</small></div>`;row.querySelector('input').onchange=e=>e.target.checked?hidden.delete(id):hidden.add(id);row.ondragstart=e=>{e.dataTransfer.setData('text/plain',id);row.style.opacity='.35'};row.ondragend=()=>row.style.opacity='1';row.ondragover=e=>e.preventDefault();row.ondrop=e=>{e.preventDefault();const from=e.dataTransfer.getData('text/plain'),to=id;if(from===to)return;ids.splice(ids.indexOf(from),1);ids.splice(ids.indexOf(to),0,from);draw()};box.append(row)})}
     shade.querySelector('[data-close]').onclick=()=>shade.remove();shade.querySelector('[data-reset]').onclick=()=>{ids=[...all.keys()];hidden.clear();draw()};shade.querySelector('[data-save]').onclick=()=>{cfg.order=ids;cfg.hidden=[...hidden];set(type,station,cfg);shade.remove();onDone&&onDone()};document.body.append(shade);draw();
   }
-  function configureCloud(db){
-    if(!db||!window.KitchenStore?.current||cloudUnsubscribe)return;
-    cloudRef=db.collection("itemSettings").doc(window.KitchenStore.cloudId("item-settings"));
-    let receivedFirstSnapshot=false;
-    cloudUnsubscribe=cloudRef.onSnapshot({includeMetadataChanges:true},snapshot=>{
-      if(snapshot.metadata?.hasPendingWrites)return;
-      if(!snapshot.exists){
-        if(!receivedFirstSnapshot){
-          receivedFirstSnapshot=true;
-          const local=read();
-          if(Object.keys(local).length)write(local);
-        }
-        return;
-      }
-      receivedFirstSnapshot=true;
-      const remote=snapshot.data()?.settings;
-      if(!remote||typeof remote!=="object")return;
-      const local=read();
-      if(JSON.stringify(local)===JSON.stringify(remote))return;
-      applyingCloud=true;
-      localStorage.setItem(KEY,JSON.stringify(remote));
-      applyingCloud=false;
-      // 只通知頁面局部重畫，避免重新訂閱快照後形成無限重新整理。
-      window.dispatchEvent(new CustomEvent("kitchen-item-settings-updated"));
-    },error=>console.warn("品項設定即時監聽暫停",error));
-  }
-  window.KitchenItemSettings={KEY,TYPES,STATIONS,read,write,get,set,idFor,apply,openManager,configureCloud};
+  window.KitchenItemSettings={KEY,TYPES,STATIONS,read,write,get,set,idFor,apply,openManager};
   document.addEventListener("DOMContentLoaded",()=>{const select=document.getElementById("type");if(select&&!select.querySelector('option[value="prep"]')){const option=document.createElement("option");option.value="prep";option.textContent="備料盤點表";select.append(option)}});
 })();

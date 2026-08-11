@@ -264,7 +264,7 @@ const BASE_AFTERNOON_PRODUCE_ITEMS = makeItems([
   ["produce-yellow-lemon", "黃檸檬/公斤", "Kg / 公斤"],
   ["144013SS", "無籽檸檬/公斤", "Kg / 公斤"],
 ]);
-let AFTERNOON_PRODUCE_ITEMS = KitchenItemSettings.apply(
+const AFTERNOON_PRODUCE_ITEMS = KitchenItemSettings.apply(
   "weekly",
   "produce",
   BASE_AFTERNOON_PRODUCE_ITEMS,
@@ -305,19 +305,6 @@ const BASE_STATION_ITEMS = Object.fromEntries(
 Object.keys(STATIONS).forEach((stationKey) => {
   STATIONS[stationKey].items = KitchenItemSettings.apply("weekly", stationKey, BASE_STATION_ITEMS[stationKey]);
 });
-
-function refreshItemSettings() {
-  Object.keys(STATIONS).forEach((stationKey) => {
-    STATIONS[stationKey].items = KitchenItemSettings.apply("weekly", stationKey, BASE_STATION_ITEMS[stationKey]);
-  });
-  AFTERNOON_PRODUCE_ITEMS = KitchenItemSettings.apply(
-    "weekly",
-    "produce",
-    BASE_AFTERNOON_PRODUCE_ITEMS,
-  );
-  if (typeof renderItems === "function") renderItems();
-}
-window.addEventListener("kitchen-item-settings-updated", refreshItemSettings);
 
 const inventoryBody = document.querySelector("#inventoryBody");
 const searchInput = document.querySelector("#searchInput");
@@ -1888,11 +1875,11 @@ itemSettingsButton.addEventListener("click", () => {
       "weekly",
       "produce",
       BASE_AFTERNOON_PRODUCE_ITEMS,
-      refreshItemSettings,
+      () => location.reload(),
     );
     return;
   }
-  KitchenItemSettings.openManager("weekly", activeStation, BASE_STATION_ITEMS[activeStation], refreshItemSettings);
+  KitchenItemSettings.openManager("weekly", activeStation, BASE_STATION_ITEMS[activeStation], () => location.reload());
 });
 
 // 進入 Weekly 時立即以今天的備料存檔重新同步。
