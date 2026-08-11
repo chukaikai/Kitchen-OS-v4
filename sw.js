@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-salmon-name-only-v1';
+const CACHE_NAME = 'kitchen-os-v41-cloud-item-settings-v1';
 
 const ASSETS = [
   './',

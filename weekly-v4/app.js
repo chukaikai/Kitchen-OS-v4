@@ -332,6 +332,7 @@ const firebaseConfig = {
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+KitchenItemSettings.configureCloud(db);
 db.enablePersistence({ synchronizeTabs: true }).catch((error) => {
   if (error?.code !== "failed-precondition" && error?.code !== "unimplemented") {
     console.warn("離線同步暫存未啟用", error);
