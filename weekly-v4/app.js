@@ -453,6 +453,7 @@ const PREP_TO_WEEKLY = {
     {
       targetCode: "131002SS",
       targetName: "鮭魚菲力",
+      sourceName: "切鮭魚",
       sources: [[8, 1]],
       note: "切鮭魚：備料以份盤點，1份回推鮭魚菲力1個",
     },
@@ -1568,7 +1569,12 @@ async function loadPrepInventory() {
           const namedRow = rule.sourceName
             ? saved.rows.find((row) => String(row?.name || "").includes(rule.sourceName))
             : null;
-          const raw = namedRow?.actual ?? saved.rows[rowIndex]?.actual;
+          // 有指定來源品名時，只接受品名命中的備料列。
+          // 不可再退回固定列號，否則舊資料缺少 name 時，會把同列的
+          // 其他品項（例如分牛肋）誤回推成鮭魚。
+          const raw = rule.sourceName
+            ? namedRow?.actual
+            : saved.rows[rowIndex]?.actual;
           if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
           return sum + toNumber(raw) * factor;
         }, 0);
