@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-s1-meat-tofu-name-sync-v1';
+const CACHE_NAME = 'kitchen-os-v41-weekly-blank-cache-fix-v2';
 
 const ASSETS = [
   './',

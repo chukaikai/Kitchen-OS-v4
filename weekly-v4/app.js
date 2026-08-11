@@ -332,7 +332,10 @@ const firebaseConfig = {
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-KitchenItemSettings.configureCloud(db);
+// 舊版 service worker 可能短暫提供尚未包含 configureCloud 的
+// item-settings.js。即使快取檔案新舊混用，也必須先完成 Weekly 初始化，
+// 不能讓整張品項表與日期一起空白。
+KitchenItemSettings.configureCloud?.(db);
 db.enablePersistence({ synchronizeTabs: true }).catch((error) => {
   if (error?.code !== "failed-precondition" && error?.code !== "unimplemented") {
     console.warn("離線同步暫存未啟用", error);
