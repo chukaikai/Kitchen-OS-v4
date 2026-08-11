@@ -972,9 +972,9 @@ if (KitchenStore.current) {
     };
   }
   PREP_TO_WEEKLY.s1 = [
-    { targetCode: "CKM000002", targetName: "舒肥牛小排", sources: [[16, 0.21]], note: "分牛小排：備料盤份；每份210g＝0.21kg" },
-    { targetCode: "CKM000001", targetName: "舒肥牛肋條", sources: [[7, 0.11]], note: "分牛肋條：備料盤份；每份110g＝0.11kg" },
-    { targetCode: "CKMM000001", targetName: "舒肥雞腿", sources: [[6, 0.11]], note: "分雞腿：備料盤份；每份110g＝0.11kg" },
+    { targetCode: "CKM000002", targetName: "舒肥牛小排", sourceName: "分牛小排", sources: [[16, 0.21]], note: "分牛小排：備料盤份；每份210g＝0.21kg" },
+    { targetCode: "CKM000001", targetName: "舒肥牛肋條", sourceName: "分牛肋", sources: [[7, 0.11]], note: "分牛肋條：備料盤份；每份110g＝0.11kg" },
+    { targetCode: "CKMM000001", targetName: "舒肥雞腿", sourceName: "分雞腿", sources: [[6, 0.11]], note: "分雞腿：備料盤份；每份110g＝0.11kg" },
     { targetCode: "142016SS", targetName: "香菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
     { targetCode: "142015SS", targetName: "蘑菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
     { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
@@ -983,7 +983,7 @@ if (KitchenStore.current) {
     { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
     { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
     { targetCode: "", targetName: "玉米糖膠液", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
-    { targetCode: "168021SS", targetName: "大漢板豆腐", sources: [[10, 1]], note: "切豆腐：備料1盒回推大漢板豆腐1盒" },
+    { targetCode: "168021SS", targetName: "大漢板豆腐", sourceName: "切豆腐", sources: [[10, 1]], note: "切豆腐：備料1盒回推大漢板豆腐1盒" },
     { targetCode: "141001SS", targetName: "牛蕃茄", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
     { targetCode: "143001SS", targetName: "奶油萵苣", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
     { targetCode: s1EggplantItem.code, targetName: "圓茄", sources: [[21, 0.28]], note: "茄子：每份回推圓茄0.28kg" },
