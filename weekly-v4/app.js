@@ -330,13 +330,20 @@ const firebaseConfig = {
   messagingSenderId: "663452568096",
   appId: "1:663452568096:web:8a9c5a8d96d8a205918a45",
 };
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// Weekly 的內建品項與本機盤點必須永遠先能使用。Firebase CDN 暫時未載入、
+// 公司網路阻擋或離線時，只暫停跨裝置同步，不可讓整張表在初始化途中空白。
+let db = null;
+if (window.firebase?.initializeApp && window.firebase?.firestore) {
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+} else {
+  console.warn("Firebase 尚未載入，Weekly 先以本機模式啟動");
+}
 // 舊版 service worker 可能短暫提供尚未包含 configureCloud 的
 // item-settings.js。即使快取檔案新舊混用，也必須先完成 Weekly 初始化，
 // 不能讓整張品項表與日期一起空白。
-KitchenItemSettings.configureCloud?.(db);
-db.enablePersistence({ synchronizeTabs: true }).catch((error) => {
+if (db) KitchenItemSettings.configureCloud?.(db);
+db?.enablePersistence({ synchronizeTabs: true }).catch((error) => {
   if (error?.code !== "failed-precondition" && error?.code !== "unimplemented") {
     console.warn("離線同步暫存未啟用", error);
   }
@@ -1373,11 +1380,11 @@ function saveInventory() {
 }
 
 function weeklyCloudRef(station) {
-  return db.collection("weeklyInventory").doc(KitchenStore.cloudId(`${station}-weekly`));
+  return db?.collection("weeklyInventory").doc(KitchenStore.cloudId(`${station}-weekly`)) || null;
 }
 
 async function syncWeeklyToCloud(station, fullInventory = null) {
-  if (station === "summary") return;
+  if (station === "summary" || !db) return;
   const stationInventory = fullInventory || loadInventory(station);
   const payload = {
     storeId: KitchenStore.current.id,
@@ -1405,7 +1412,7 @@ async function syncWeeklyToCloud(station, fullInventory = null) {
 }
 
 function startWeeklyRealtime(station) {
-  if (weeklyUnsubscribers.has(station)) return;
+  if (!db || weeklyUnsubscribers.has(station)) return;
   let receivedFirstSnapshot = false;
   const unsubscribe = weeklyCloudRef(station).onSnapshot({ includeMetadataChanges: true }, (snap) => {
     if (snap.metadata.hasPendingWrites) return;
@@ -1463,6 +1470,7 @@ function dateKey(date = new Date()) {
 async function getPrepInventory(station, date) {
   let data = null;
   try {
+    if (!db) throw new Error("offline-local-fallback");
     const snap = await db.collection("dailyInventory").doc(KitchenStore.cloudId(`prep-${station}-${date}`)).get();
     if (snap.exists) data = snap.data();
   } catch (error) {
