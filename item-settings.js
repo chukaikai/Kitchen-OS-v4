@@ -91,9 +91,8 @@
       applyingCloud=true;
       localStorage.setItem(KEY,JSON.stringify(remote));
       applyingCloud=false;
-      // 清單已在頁面載入時產生；收到另一支裝置的新排序或隱藏設定後，
-      // 重新載入一次才能讓所有站別與下午蔬菜同時套用最新設定。
-      location.reload();
+      // 只通知頁面局部重畫，避免重新訂閱快照後形成無限重新整理。
+      window.dispatchEvent(new CustomEvent("kitchen-item-settings-updated"));
     },error=>console.warn("品項設定即時監聽暫停",error));
   }
   window.KitchenItemSettings={KEY,TYPES,STATIONS,read,write,get,set,idFor,apply,openManager,configureCloud};

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly-single-file-fix-v4';
+const CACHE_NAME = 'kitchen-os-v41-weekly-reload-loop-fix-v5';
 
 const ASSETS = [
   './',
