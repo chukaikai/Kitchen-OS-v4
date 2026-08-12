@@ -1506,12 +1506,14 @@ async function loadPrepInventory() {
     return rule.order;
   }
 
-  // 先移除上一次抓取產生的回推值，只保留 Weekly 人工輸入的站上數字。
-  // 若選擇的日期沒有備料存檔，就不會繼續顯示前一日的回推庫存。
+  // Weekly 的「站上」只可來自所選日期已儲存的備料盤點。
+  // 舊版有些回推數字遺失 prepLinked 標記，因此不能只清有標記的列；
+  // 每次重新抓取都先清空全部站上值，再用當日存檔重新計算。
+  // 「儲位」為人工盤點，完全不受影響。
   function clearPreviousPrepLinks(stationInventory) {
     Object.values(stationInventory).forEach((current) => {
-      if (!current || typeof current !== "object" || !current.prepLinked) return;
-      current.station = current.manualStation ?? "";
+      if (!current || typeof current !== "object") return;
+      current.station = "";
       delete current.manualStation;
       delete current.prepValue;
       delete current.prepLinked;
@@ -1523,10 +1525,8 @@ async function loadPrepInventory() {
   function addPrepValue(station, stationInventory, targetOrder, value, note) {
     stationInventory[targetOrder] ||= {};
     const current = stationInventory[targetOrder];
-    const manualStation = current.prepLinked
-      ? toNumber(current.manualStation)
-      : toNumber(current.station);
-    current.manualStation = formatNumber(manualStation);
+    const manualStation = 0;
+    current.manualStation = "0";
     current.prepValue = formatNumber(value);
     const targetItem = STATIONS[station]?.items.find((item) => String(item.order) === String(targetOrder));
     const conversion = targetItem?.customPackGrams
