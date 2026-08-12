@@ -1923,8 +1923,12 @@ let cloudSaveTimer;
 const weeklyUnsubscribers = new Map();
 const dirtyWeeklyFields = new Set();
 
-function storageKey(station) {
-  return `kitchen-os-v4.1:101:${station}:weekly`;
+function selectedWeeklyDate() {
+  return inventoryDate?.value || dateKey();
+}
+
+function storageKey(station, date = selectedWeeklyDate()) {
+  return `kitchen-os-v4.1:101:${station}:weekly:${date}`;
 }
 
 function loadInventory(station) {
@@ -2213,8 +2217,8 @@ function saveInventory() {
   }, 1200);
 }
 
-function weeklyCloudRef(station) {
-  return db?.collection("weeklyInventory").doc(KitchenStore.cloudId(`${station}-weekly`)) || null;
+function weeklyCloudRef(station, date = selectedWeeklyDate()) {
+  return db?.collection("weeklyInventory").doc(KitchenStore.cloudId(`${station}-weekly-${date}`)) || null;
 }
 
 async function syncWeeklyToCloud(station, fullInventory = null) {
@@ -2223,6 +2227,7 @@ async function syncWeeklyToCloud(station, fullInventory = null) {
   const payload = {
     storeId: KitchenStore.current.id,
     station,
+    inventoryDate: selectedWeeklyDate(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   };
   if (fullInventory) {
@@ -2246,9 +2251,11 @@ async function syncWeeklyToCloud(station, fullInventory = null) {
 }
 
 function startWeeklyRealtime(station) {
-  if (!db || weeklyUnsubscribers.has(station)) return;
+  const date = selectedWeeklyDate();
+  const subscriptionKey = `${station}|${date}`;
+  if (!db || weeklyUnsubscribers.has(subscriptionKey)) return;
   let receivedFirstSnapshot = false;
-  const unsubscribe = weeklyCloudRef(station).onSnapshot({ includeMetadataChanges: true }, (snap) => {
+  const unsubscribe = weeklyCloudRef(station, date).onSnapshot({ includeMetadataChanges: true }, (snap) => {
     if (snap.metadata.hasPendingWrites) return;
     if (!snap.exists) {
       if (!receivedFirstSnapshot) {
@@ -2267,7 +2274,13 @@ function startWeeklyRealtime(station) {
     if (!inventoryBody.querySelector(".number-input:focus")) renderItems();
     saveState.textContent = "已收到其他裝置更新";
   }, (error) => console.warn("Weekly 即時監聽暫停", error));
-  weeklyUnsubscribers.set(station, unsubscribe);
+  weeklyUnsubscribers.set(subscriptionKey, unsubscribe);
+}
+
+function restartWeeklyRealtimeForDate() {
+  weeklyUnsubscribers.forEach((unsubscribe) => unsubscribe());
+  weeklyUnsubscribers.clear();
+  ["cold", "s1", "s2", "pizza", "produce"].forEach(startWeeklyRealtime);
 }
 
 function createNumberInput(item, field) {
@@ -2701,7 +2714,12 @@ renderItems();
 setTableHead("station");
 inventoryDate.value = dateKey();
 loadPrepButton.addEventListener("click", loadPrepInventory);
-inventoryDate.addEventListener("change", loadPrepInventory);
+inventoryDate.addEventListener("change", async () => {
+  restartWeeklyRealtimeForDate();
+  inventory = loadInventory(activeStation);
+  renderItems();
+  await loadPrepInventory();
+});
 itemSettingsButton.addEventListener("click", () => {
   if (activeStation === "summary") return alert("請先選擇工作站或下午蔬菜。");
   if (activeStation === "produce") {
