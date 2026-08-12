@@ -1881,6 +1881,7 @@ if (KitchenStore.current) {
   const mintSauceRow = 30;
   const pickledCucumberRow = 31;
   const pickledApricotRow = 32;
+  const saltedLemonRow = 33;
   const dicedRedPepperRow = 34;
   const plainCreamRow = 36;
   const sweetenedCreamRow = 37;
@@ -1896,14 +1897,15 @@ if (KitchenStore.current) {
     { targetCode: "181003SS", targetName: "平葉巴西里", sources: [[mintSauceRow, 10 / 1000]], note: "薄荷醬：每盒（1倍）含平葉巴西里10g；回推kg" },
     { targetCode: "145009SS", targetName: "香菜", sources: [[mintSauceRow, 10 / 1000]], note: "薄荷醬：每盒（1倍）含香菜10g；回推kg" },
     { targetCode: "142019SS", targetName: "蒜仁", sources: [[mintSauceRow, 10 / 1000]], note: "薄荷醬：每盒（1倍）含蒜泥10g；回推蒜仁kg；綠檸檬皮不回推" },
-    { targetCode: "142012SS", targetName: "小黃瓜", sources: [[pickledCucumberRow, 100 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含小黃瓜100g；回推kg" },
-    { targetCode: "162006SS", targetName: "精鹽", sources: [[pickledCucumberRow, 5 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含鹽5g；回推kg" },
-    { targetCode: "185010SS", targetName: "純糖粉", sources: [[pickledCucumberRow, 1 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含糖1g；1000g／袋" },
-    { targetCode: "142019SS", targetName: "蒜仁", sources: [[pickledCucumberRow, 10 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含蒜泥10g；回推蒜仁kg" },
-    { targetCode: "142004SS", targetName: "乾蔥", sources: [[pickledCucumberRow, 10 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含甘蔥碎10g；回推乾蔥kg" },
-    { targetCode: "cold-white-vinegar", targetName: "亨氏白醋", sources: [[pickledCucumberRow, 20 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含亨氏白醋20g；回推kg" },
-    { targetCode: "168007SS", targetName: "杏桃乾", sources: [[pickledApricotRow, 0.5 / 1000]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；杏桃乾1000g／袋" },
-    { targetCode: "CKH000042", targetName: "醃杏桃醋汁", sources: [[pickledApricotRow, 0.5 / 100]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；醋汁100g／袋" },
+    { targetCode: "142012SS", targetName: "小黃瓜", sourceName: "醃漬小黃瓜丁", sources: [[pickledCucumberRow, 100 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含小黃瓜100g；回推kg" },
+    { targetCode: "162006SS", targetName: "精鹽", sourceName: "醃漬小黃瓜丁", sources: [[pickledCucumberRow, 5 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含鹽5g；回推kg" },
+    { targetCode: "185010SS", targetName: "純糖粉", sourceName: "醃漬小黃瓜丁", sources: [[pickledCucumberRow, 1 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含糖1g；1000g／袋" },
+    { targetCode: "142019SS", targetName: "蒜仁", sourceName: "醃漬小黃瓜丁", sources: [[pickledCucumberRow, 10 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含蒜泥10g；回推蒜仁kg" },
+    { targetCode: "142004SS", targetName: "乾蔥", sourceName: "醃漬小黃瓜丁", sources: [[pickledCucumberRow, 10 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含甘蔥碎10g；回推乾蔥kg" },
+    { targetCode: "cold-white-vinegar", targetName: "亨氏白醋", sourceName: "醃漬小黃瓜丁", sources: [[pickledCucumberRow, 20 / 146 / 1000]], note: "醃漬小黃瓜丁：146g成品含亨氏白醋20g；回推kg" },
+    { targetCode: "168007SS", targetName: "杏桃乾", sourceName: "醃漬杏桃丁", sources: [[pickledApricotRow, 0.5 / 1000]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；杏桃乾1000g／袋" },
+    { targetCode: "CKH000042", targetName: "醃杏桃醋汁", sourceName: "醃漬杏桃丁", sources: [[pickledApricotRow, 0.5 / 100]], note: "醃漬杏桃丁：杏桃與醃杏桃醋汁1:1；醋汁100g／袋" },
+    { targetCode: "CKC000023-1", targetName: "鹽漬檸檬", sourceName: "鹽檸檬丁", sources: [[saltedLemonRow, 1 / 80]], note: "鹽檸檬丁：每顆可用皮約20g；4顆／包＝80g可用量" },
     { targetCode: "181005SS", targetName: "紅椒", sources: [[dicedRedPepperRow, 1 / 1000]], note: "紅椒丁：盤點g ÷ 1000＝紅椒kg" },
     { targetCode: "173003CK", targetName: "艾樂薇 35%動物鮮奶油", sources: [[plainCreamRow, 0.5], [sweetenedCreamRow, 0.45]], note: "鮮奶油：每桶500g回推0.5瓶；有糖鮮奶油每桶含450g鮮奶油，回推0.45瓶" },
     { targetCode: "142020SS", targetName: "羽衣甘藍", sources: [[mixedGreensRow, 300 / 1700 / 1000]], note: "混合生菜：每1700g含羽衣甘藍300g；盤點成品g後回推kg" },
