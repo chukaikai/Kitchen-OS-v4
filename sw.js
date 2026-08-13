@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-three-store-weekly-date-isolation-20260812-v1';
+const CACHE_NAME = 'kitchen-os-v41-three-store-four-station-prep-sync-20260812-v1';
 
 const ASSETS = [
   './',

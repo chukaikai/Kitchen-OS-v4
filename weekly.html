@@ -1922,6 +1922,8 @@ let saveTimer;
 let cloudSaveTimer;
 const weeklyUnsubscribers = new Map();
 const dirtyWeeklyFields = new Set();
+let prepSyncInProgress = false;
+let prepSyncFinishedAt = 0;
 
 function selectedWeeklyDate() {
   return inventoryDate?.value || dateKey();
@@ -2257,6 +2259,9 @@ function startWeeklyRealtime(station) {
   let receivedFirstSnapshot = false;
   const unsubscribe = weeklyCloudRef(station, date).onSnapshot({ includeMetadataChanges: true }, (snap) => {
     if (snap.metadata.hasPendingWrites) return;
+    // 備料回推會一次更新四站。期間收到的 Weekly 舊快照不可覆蓋
+    // 剛算好的站上數字；結束後的短暫緩衝也避開伺服器回送舊快照。
+    if (prepSyncInProgress || Date.now() - prepSyncFinishedAt < 1500) return;
     if (!snap.exists) {
       if (!receivedFirstSnapshot) {
         receivedFirstSnapshot = true;
@@ -2268,7 +2273,16 @@ function startWeeklyRealtime(station) {
     receivedFirstSnapshot = true;
     const cloudInventory = snap.data()?.inventory;
     if (!cloudInventory || typeof cloudInventory !== "object") return;
-    localStorage.setItem(storageKey(station), JSON.stringify(cloudInventory));
+    // 若本機已有同日期的備料回推，而雲端快照尚未包含該列，保留本機
+    // 回推值；其餘儲位與人工欄位仍照常接受跨裝置同步。
+    const localInventory = loadInventory(station);
+    Object.entries(localInventory).forEach(([order, localRow]) => {
+      if (!localRow?.prepLinked || localRow.prepDate !== date) return;
+      const cloudRow = cloudInventory[order];
+      if (cloudRow?.prepLinked && cloudRow.prepDate === date) return;
+      cloudInventory[order] = { ...(cloudRow || {}), ...localRow };
+    });
+    localStorage.setItem(storageKey(station, date), JSON.stringify(cloudInventory));
     if (station !== activeStation) return;
     inventory = cloudInventory;
     if (!inventoryBody.querySelector(".number-input:focus")) renderItems();
@@ -2315,20 +2329,37 @@ function dateKey(date = new Date()) {
 }
 
 async function getPrepInventory(station, date) {
+  let localData = null;
+  try {
+    localData = JSON.parse(localStorage.getItem(`kos-daily-v06-prep-${station}-${date}`) || "null");
+  } catch (error) {
+    console.warn("本機備料盤點格式錯誤", error);
+  }
   let data = null;
   try {
     if (!db) throw new Error("offline-local-fallback");
-    const snap = await db.collection("dailyInventory").doc(KitchenStore.cloudId(`prep-${station}-${date}`)).get();
+    const ref = db.collection("dailyInventory").doc(KitchenStore.cloudId(`prep-${station}-${date}`));
+    let snap;
+    try {
+      snap = await ref.get({ source: "server" });
+    } catch {
+      snap = await ref.get();
+    }
     if (snap.exists) data = snap.data();
   } catch (error) {
     console.warn("雲端備料盤點讀取失敗，改用本機資料", error);
   }
-  return data || JSON.parse(localStorage.getItem(`kos-daily-v06-prep-${station}-${date}`) || "null");
+  // 同裝置剛完成的盤點可能仍在等待上傳；以 updatedAtLocal 較新的版本為準。
+  const cloudTime = Date.parse(data?.updatedAtLocal || "") || 0;
+  const localTime = Date.parse(localData?.updatedAtLocal || "") || 0;
+  return localTime > cloudTime ? localData : (data || localData);
 }
 
 async function loadPrepInventory() {
   const date = inventoryDate.value;
   if (!date) return;
+  if (prepSyncInProgress) return;
+  prepSyncInProgress = true;
   loadPrepButton.disabled = true;
   prepSyncMessage.textContent = "正在讀取備料盤點…";
   let linked = 0;
@@ -2336,6 +2367,7 @@ async function loadPrepInventory() {
   let s2ShallotValue = null;
   let coldTomatoValues = null;
   let coldTruffleValue = null;
+  const stationResults = [];
 
   function resolveTargetOrder(station, rule) {
     const items = STATIONS[station]?.items || [];
@@ -2394,10 +2426,32 @@ async function loadPrepInventory() {
     clearPreviousPrepLinks(stationInventory);
     if (!saved?.rows) {
       missingStations += 1;
+      stationResults.push(`${STATIONS[station].label}未找到`);
       localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
       await syncWeeklyToCloud(station, stationInventory);
       continue;
     }
+    const normalizePrepName = (value) => String(value || "")
+      .toLocaleLowerCase("zh-Hant")
+      .replace(/蕃/g, "番")
+      .replace(/pizza/g, "披薩")
+      .replace(/熟|退冰|當日|盤重量|冷凍需盤入/g, "")
+      .replace(/\d+(?:\.\d+)?\s*(?:kg|k|g|公克|公斤|cm|份|顆)/gi, "")
+      .replace(/[\s\-_/／().（）×*～~＋+]/g, "");
+    const findSavedRow = (rowIndex, explicitName = "") => {
+      const expectedName = explicitName || DATA.prep?.[station]?.[rowIndex]?.[0] || "";
+      const expected = normalizePrepName(expectedName);
+      if (expected) {
+        const named = saved.rows.find((row) => {
+          const actual = normalizePrepName(row?.name);
+          return actual && (actual === expected || actual.includes(expected) || expected.includes(actual));
+        });
+        if (named) return named;
+      }
+      // 旧存档没有保存 name 时才使用原列号，避免排序后误抓别的品项。
+      const indexed = saved.rows[rowIndex];
+      return indexed && !indexed.name ? indexed : null;
+    };
     // v18 修正：舊版曾將 S2 甘蔥碎誤寫到第 41 項白米。
     // 只清除由該錯誤回推建立的數字，不影響人員手動盤點的白米。
     if (
@@ -2416,24 +2470,16 @@ async function loadPrepInventory() {
       let converted = 0;
       if (rule.sourcesAny) {
         const matchedIndex = rule.sourcesAny.find((rowIndex) => {
-          const raw = saved.rows[rowIndex]?.actual;
+          const raw = findSavedRow(rowIndex, rule.sourceName)?.actual;
           return raw !== "" && raw != null && Number.isFinite(Number(raw));
         });
         if (matchedIndex != null) {
           hasValue = true;
-          converted = toNumber(saved.rows[matchedIndex]?.actual) * rule.factor;
+          converted = toNumber(findSavedRow(matchedIndex, rule.sourceName)?.actual) * rule.factor;
         }
       } else {
         converted = rule.sources.reduce((sum, [rowIndex, factor]) => {
-          const namedRow = rule.sourceName
-            ? saved.rows.find((row) => String(row?.name || "").includes(rule.sourceName))
-            : null;
-          // 有指定來源品名時，只接受品名命中的備料列。
-          // 不可再退回固定列號，否則舊資料缺少 name 時，會把同列的
-          // 其他品項（例如分牛肋）誤回推成鮭魚。
-          const raw = rule.sourceName
-            ? namedRow?.actual
-            : saved.rows[rowIndex]?.actual;
+          const raw = findSavedRow(rowIndex, rule.sourceName)?.actual;
           if (raw !== "" && raw != null && Number.isFinite(Number(raw))) hasValue = true;
           return sum + toNumber(raw) * factor;
         }, 0);
@@ -2460,7 +2506,7 @@ async function loadPrepInventory() {
     // 舊版曾把 10 盒換成 10000g 寫入；當天備料未盤玉米糖膠時應歸零。
     if (station === "s1") {
       const cornRule = rules.find((rule) => /玉米糖膠/.test(rule.targetName || rule.note || ""));
-      const cornRaw = saved.rows?.[3]?.actual;
+      const cornRaw = findSavedRow(3, "玉米糖膠")?.actual;
       const cornOrder = cornRule ? resolveTargetOrder(station, cornRule) : null;
       const cornCurrent = cornOrder == null ? null : stationInventory[cornOrder];
       const cornWasNotCounted = cornRaw === "" || cornRaw == null || !Number.isFinite(Number(cornRaw));
@@ -2482,11 +2528,12 @@ async function loadPrepInventory() {
         entry.notes.join("；") || `由 ${date} 備料盤點換算`,
       );
     });
+    stationResults.push(`${STATIONS[station].label}${convertedByTarget.size}項`);
 
     // 醃綜合蕃茄固定拆料：直接用品項代碼定位兩種鮮蕃茄，避免名稱中的
     // 「蕃／番」或「綜合櫻」規格文字差異造成同步漏項。
     if (station === "cold") {
-      const tomatoBoxesRaw = saved.rows[13]?.actual;
+      const tomatoBoxesRaw = findSavedRow(13, "醃綜合蕃茄")?.actual;
       if (
         tomatoBoxesRaw !== "" &&
         tomatoBoxesRaw != null &&
@@ -2523,8 +2570,10 @@ async function loadPrepInventory() {
   inventory = loadInventory(activeStation);
   renderItems();
   prepSyncMessage.textContent = linked
-    ? `已抓取 ${date} 的盤點資料，共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${coldTomatoValues !== null ? ` COLD聖女蕃茄：${coldTomatoValues} kg；綜合彩色番茄：${coldTomatoValues} kg。` : ""}${coldTruffleValue !== null ? ` COLD夏季5%黑松露醬：${coldTruffleValue}罐。` : ""}${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
+    ? `已抓取 ${date} 的盤點資料：${stationResults.join("、")}；共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${coldTomatoValues !== null ? ` COLD聖女蕃茄：${coldTomatoValues} kg；綜合彩色番茄：${coldTomatoValues} kg。` : ""}${coldTruffleValue !== null ? ` COLD夏季5%黑松露醬：${coldTruffleValue}罐。` : ""}${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
     : `找不到 ${date} 已儲存的備料盤點，請先到「備料每日盤點表」填寫並儲存。`;
+  prepSyncInProgress = false;
+  prepSyncFinishedAt = Date.now();
   loadPrepButton.disabled = false;
 }
 
