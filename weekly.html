@@ -773,6 +773,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">連線修正版 2026-08-15</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -1168,6 +1169,12 @@ let db = null;
 if (window.firebase?.initializeApp && window.firebase?.firestore) {
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  // 部分店內 Wi-Fi／瀏覽器會卡在 WebChannel；強制改用相容性較高的長輪詢。
+  try {
+    db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
+  } catch (error) {
+    console.warn("Firestore 長輪詢設定沿用既有值", error);
+  }
 } else {
   console.warn("Firebase 尚未載入，Weekly 先以本機模式啟動");
 }
