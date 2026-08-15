@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-three-store-four-station-prep-sync-20260812-v1';
+const CACHE_NAME = 'kitchen-os-v41-weekly-cloud-timeout-fix-20260815-v1';
 
 const ASSETS = [
   './',

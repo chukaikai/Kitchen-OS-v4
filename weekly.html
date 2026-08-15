@@ -2339,11 +2339,19 @@ async function getPrepInventory(station, date) {
   try {
     if (!db) throw new Error("offline-local-fallback");
     const ref = db.collection("dailyInventory").doc(KitchenStore.cloudId(`prep-${station}-${date}`));
+    const withTimeout = (promise, milliseconds, label) => Promise.race([
+      promise,
+      new Promise((_, reject) => window.setTimeout(
+        () => reject(new Error(`${label}-timeout`)),
+        milliseconds,
+      )),
+    ]);
     let snap;
     try {
-      snap = await ref.get({ source: "server" });
+      snap = await withTimeout(ref.get({ source: "server" }), 6000, "server-read");
     } catch {
-      snap = await ref.get();
+      // 伺服器暫時沒有回應時，最多再等 2 秒讀 Firebase 快取。
+      snap = await withTimeout(ref.get({ source: "cache" }), 2000, "cache-read");
     }
     if (snap.exists) data = snap.data();
   } catch (error) {
@@ -2355,12 +2363,9 @@ async function getPrepInventory(station, date) {
   return localTime > cloudTime ? localData : (data || localData);
 }
 
-async function loadPrepInventory() {
+async function loadPrepInventoryCore() {
   const date = inventoryDate.value;
   if (!date) return;
-  if (prepSyncInProgress) return;
-  prepSyncInProgress = true;
-  loadPrepButton.disabled = true;
   prepSyncMessage.textContent = "正在讀取備料盤點…";
   let linked = 0;
   let missingStations = 0;
@@ -2420,15 +2425,23 @@ async function loadPrepInventory() {
     current.prepNote = note || `由 ${date} 備料盤點換算`;
   }
 
+  // 四站同時讀取，避免一站連線緩慢時讓其他三站一起排隊等待。
+  const prepInventoryByStation = Object.fromEntries(await Promise.all(
+    Object.keys(PREP_TO_WEEKLY).map(async (station) => [
+      station,
+      await getPrepInventory(station, date),
+    ]),
+  ));
+
   for (const [station, rules] of Object.entries(PREP_TO_WEEKLY)) {
-    const saved = await getPrepInventory(station, date);
+    const saved = prepInventoryByStation[station];
     const stationInventory = loadInventory(station);
     clearPreviousPrepLinks(stationInventory);
     if (!saved?.rows) {
       missingStations += 1;
       stationResults.push(`${STATIONS[station].label}未找到`);
       localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
-      await syncWeeklyToCloud(station, stationInventory);
+      void syncWeeklyToCloud(station, stationInventory);
       continue;
     }
     const normalizePrepName = (value) => String(value || "")
@@ -2564,7 +2577,7 @@ async function loadPrepInventory() {
       }
     }
     localStorage.setItem(storageKey(station), JSON.stringify(stationInventory));
-    await syncWeeklyToCloud(station, stationInventory);
+    void syncWeeklyToCloud(station, stationInventory);
   }
 
   inventory = loadInventory(activeStation);
@@ -2572,9 +2585,23 @@ async function loadPrepInventory() {
   prepSyncMessage.textContent = linked
     ? `已抓取 ${date} 的盤點資料：${stationResults.join("、")}；共更新 ${linked} 個 Weekly 站上數字${missingStations ? `；${missingStations} 站尚未儲存` : ""}。${coldTomatoValues !== null ? ` COLD聖女蕃茄：${coldTomatoValues} kg；綜合彩色番茄：${coldTomatoValues} kg。` : ""}${coldTruffleValue !== null ? ` COLD夏季5%黑松露醬：${coldTruffleValue}罐。` : ""}${s2ShallotValue !== null ? ` S2乾蔥：${s2ShallotValue} kg。` : ""}`
     : `找不到 ${date} 已儲存的備料盤點，請先到「備料每日盤點表」填寫並儲存。`;
-  prepSyncInProgress = false;
   prepSyncFinishedAt = Date.now();
-  loadPrepButton.disabled = false;
+}
+
+async function loadPrepInventory() {
+  if (prepSyncInProgress) return;
+  prepSyncInProgress = true;
+  loadPrepButton.disabled = true;
+  try {
+    await loadPrepInventoryCore();
+  } catch (error) {
+    console.warn("備料盤點讀取未完成", error);
+    prepSyncMessage.textContent = "備料盤點讀取失敗，已保留目前資料；請稍後再按一次手動重新抓取。";
+  } finally {
+    prepSyncInProgress = false;
+    prepSyncFinishedAt = Date.now();
+    loadPrepButton.disabled = false;
+  }
 }
 
 function createRow(item) {
