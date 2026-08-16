@@ -629,6 +629,9 @@ tbody tr:hover .total-cell {
     legacyCloudId(id) {
       return selected?.id === "taipei101" ? id : null;
     },
+    rawGet(key) {
+      return nativeGet.call(localStorage, key);
+    },
   };
 
   if (!selected) {
@@ -773,7 +776,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">本機相容修正版 2026-08-16</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">存檔定位修正版 2026-08-16</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -2336,18 +2339,38 @@ function dateKey(date = new Date()) {
 }
 
 async function getPrepInventory(station, date) {
+  const logicalKey = `kos-daily-v06-prep-${station}-${date}`;
   let localData = null;
   try {
-    localData = JSON.parse(localStorage.getItem(`kos-daily-v06-prep-${station}-${date}`) || "null");
+    localData = JSON.parse(localStorage.getItem(logicalKey) || "null");
   } catch (error) {
     console.warn("本機備料盤點格式錯誤", error);
+  }
+  if (!localData?.rows && KitchenStore.rawGet) {
+    const storeToken = `kitchen-os:store:${KitchenStore.current.id}:`;
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const physicalKey = localStorage.key(index) || "";
+      if (!physicalKey.endsWith(logicalKey) || !physicalKey.includes(storeToken)) continue;
+      try {
+        const candidate = JSON.parse(KitchenStore.rawGet(physicalKey) || "null");
+        if (!candidate?.rows) continue;
+        localData = candidate;
+        localStorage.setItem(logicalKey, JSON.stringify(candidate));
+        break;
+      } catch (error) {
+        console.warn("略過無法解析的舊備料存檔", physicalKey, error);
+      }
+    }
   }
   // 同一台裝置已存有當日盤點時直接使用，不可先被雲端等待或舊快照影響。
   if (localData?.rows) return localData;
   let data = null;
   try {
     if (!db) throw new Error("offline-local-fallback");
-    const ref = db.collection("dailyInventory").doc(KitchenStore.cloudId(`prep-${station}-${date}`));
+    const documentIds = [
+      KitchenStore.cloudId(`prep-${station}-${date}`),
+      `prep-${station}-${date}`,
+    ].filter((value, index, list) => value && list.indexOf(value) === index);
     const withTimeout = (promise, milliseconds, label) => Promise.race([
       promise,
       new Promise((_, reject) => window.setTimeout(
@@ -2355,14 +2378,26 @@ async function getPrepInventory(station, date) {
         milliseconds,
       )),
     ]);
-    let snap;
-    try {
-      snap = await withTimeout(ref.get({ source: "server" }), 6000, "server-read");
-    } catch {
-      // 伺服器暫時沒有回應時，最多再等 2 秒讀 Firebase 快取。
-      snap = await withTimeout(ref.get({ source: "cache" }), 2000, "cache-read");
+    let snap = null;
+    for (const documentId of documentIds) {
+      const ref = db.collection("dailyInventory").doc(documentId);
+      try {
+        const candidate = await withTimeout(ref.get({ source: "server" }), 4000, "server-read");
+        if (candidate.exists) {
+          snap = candidate;
+          break;
+        }
+      } catch {
+        try {
+          const candidate = await withTimeout(ref.get({ source: "cache" }), 1000, "cache-read");
+          if (candidate.exists) {
+            snap = candidate;
+            break;
+          }
+        } catch {}
+      }
     }
-    if (snap.exists) data = snap.data();
+    if (snap?.exists) data = snap.data();
   } catch (error) {
     console.warn("雲端備料盤點讀取失敗，改用本機資料", error);
   }

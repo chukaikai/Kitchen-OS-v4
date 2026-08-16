@@ -41,6 +41,9 @@
     legacyCloudId(id) {
       return selected?.id === "taipei101" ? id : null;
     },
+    rawGet(key) {
+      return nativeGet.call(localStorage, key);
+    },
   };
 
   if (!selected) {
