@@ -773,7 +773,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">連線修正版 2026-08-15</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">本機相容修正版 2026-08-16</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -2342,6 +2342,8 @@ async function getPrepInventory(station, date) {
   } catch (error) {
     console.warn("本機備料盤點格式錯誤", error);
   }
+  // 同一台裝置已存有當日盤點時直接使用，不可先被雲端等待或舊快照影響。
+  if (localData?.rows) return localData;
   let data = null;
   try {
     if (!db) throw new Error("offline-local-fallback");
@@ -2451,6 +2453,9 @@ async function loadPrepInventoryCore() {
       void syncWeeklyToCloud(station, stationInventory);
       continue;
     }
+    const savedRows = Array.isArray(saved.rows)
+      ? saved.rows
+      : Object.values(saved.rows || {});
     const normalizePrepName = (value) => String(value || "")
       .toLocaleLowerCase("zh-Hant")
       .replace(/蕃/g, "番")
@@ -2462,14 +2467,14 @@ async function loadPrepInventoryCore() {
       const expectedName = explicitName || DATA.prep?.[station]?.[rowIndex]?.[0] || "";
       const expected = normalizePrepName(expectedName);
       if (expected) {
-        const named = saved.rows.find((row) => {
+        const named = savedRows.find((row) => {
           const actual = normalizePrepName(row?.name);
           return actual && (actual === expected || actual.includes(expected) || expected.includes(actual));
         });
         if (named) return named;
       }
       // 旧存档没有保存 name 时才使用原列号，避免排序后误抓别的品项。
-      const indexed = saved.rows[rowIndex];
+      const indexed = savedRows[rowIndex];
       return indexed && !indexed.name ? indexed : null;
     };
     // v18 修正：舊版曾將 S2 甘蔥碎誤寫到第 41 項白米。
@@ -2486,6 +2491,7 @@ async function loadPrepInventoryCore() {
     }
     const convertedByTarget = new Map();
     rules.forEach((rule) => {
+      try {
       let hasValue = false;
       let converted = 0;
       if (rule.sourcesAny) {
@@ -2520,6 +2526,9 @@ async function loadPrepInventoryCore() {
         coldTruffleValue = formatNumber(converted);
       }
       linked += 1;
+      } catch (error) {
+        console.warn(`${STATIONS[station].label} 單項備料回推略過`, rule, error);
+      }
     });
 
     // 清理由早期版本留下、尚未帶 prepLinked 標記的玉米糖膠錯誤值。
@@ -2603,7 +2612,7 @@ async function loadPrepInventory() {
     await loadPrepInventoryCore();
   } catch (error) {
     console.warn("備料盤點讀取未完成", error);
-    prepSyncMessage.textContent = "備料盤點讀取失敗，已保留目前資料；請稍後再按一次手動重新抓取。";
+    prepSyncMessage.textContent = `備料盤點處理失敗，已保留目前資料（${error?.message || "未知錯誤"}）。`;
   } finally {
     prepSyncInProgress = false;
     prepSyncFinishedAt = Date.now();

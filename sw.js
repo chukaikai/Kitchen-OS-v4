@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly-force-longpoll-20260815-v1';
+const CACHE_NAME = 'kitchen-os-v41-weekly-local-legacy-20260816-v1';
 
 const ASSETS = [
   './',
