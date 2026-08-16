@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly-storage-key-recovery-20260816-v1';
+const CACHE_NAME = 'kitchen-os-v41-weekly-same-channel-20260816-v1';
 
 const ASSETS = [
   './',

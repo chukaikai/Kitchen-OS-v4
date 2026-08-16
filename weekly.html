@@ -776,7 +776,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">存檔定位修正版 2026-08-16</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">同通道同步修正版 2026-08-16</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -1172,12 +1172,6 @@ let db = null;
 if (window.firebase?.initializeApp && window.firebase?.firestore) {
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
-  // 部分店內 Wi-Fi／瀏覽器會卡在 WebChannel；強制改用相容性較高的長輪詢。
-  try {
-    db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
-  } catch (error) {
-    console.warn("Firestore 長輪詢設定沿用既有值", error);
-  }
 } else {
   console.warn("Firebase 尚未載入，Weekly 先以本機模式啟動");
 }
@@ -2382,19 +2376,15 @@ async function getPrepInventory(station, date) {
     for (const documentId of documentIds) {
       const ref = db.collection("dailyInventory").doc(documentId);
       try {
-        const candidate = await withTimeout(ref.get({ source: "server" }), 4000, "server-read");
+        // 與 Daily 儲存頁使用相同的 Firestore 預設通道，讓 SDK 自行處理
+        // 線上讀取與快取；不要在 Weekly 單獨強制 server/cache 模式。
+        const candidate = await withTimeout(ref.get(), 8000, "default-read");
         if (candidate.exists) {
           snap = candidate;
           break;
         }
-      } catch {
-        try {
-          const candidate = await withTimeout(ref.get({ source: "cache" }), 1000, "cache-read");
-          if (candidate.exists) {
-            snap = candidate;
-            break;
-          }
-        } catch {}
+      } catch (error) {
+        console.warn("備料盤點文件讀取失敗", documentId, error);
       }
     }
     if (snap?.exists) data = snap.data();
