@@ -776,7 +776,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">同通道同步修正版 2026-08-16</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">規格字元修正版 2026-08-17</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -2487,7 +2487,9 @@ async function loadPrepInventoryCore() {
       .replace(/pizza/g, "披薩")
       .replace(/熟|退冰|當日|盤重量|冷凍需盤入/g, "")
       .replace(/\d+(?:\.\d+)?\s*(?:kg|k|g|公克|公斤|cm|份|顆)/gi, "")
-      .replace(/[\s\-_/／().（）×*～~＋+]/g, "");
+      // Daily 可能顯示 4X4cm、4×4cm 或 4x4cm；三種都代表同一規格。
+      // 先轉小寫後同時移除 x 與 ×，避免已存資料因字型符號不同而被跳過。
+      .replace(/[\s\-_/／().（）x×*～~＋+]/g, "");
     const findSavedRow = (rowIndex, explicitName = "") => {
       const expectedName = explicitName || DATA.prep?.[station]?.[rowIndex]?.[0] || "";
       const expected = normalizePrepName(expectedName);

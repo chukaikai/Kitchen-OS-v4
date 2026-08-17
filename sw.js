@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly-same-channel-20260816-v1';
+const CACHE_NAME = 'kitchen-os-v41-weekly-size-symbol-20260817-v1';
 
 const ASSETS = [
   './',
