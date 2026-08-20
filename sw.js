@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-central-ribeye-three-store-20260820-v1';
+const CACHE_NAME = 'kitchen-os-v41-central-ribeye-towel-three-store-20260820-v1';
 
 const ASSETS = [
   './',
