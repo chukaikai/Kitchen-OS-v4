@@ -70,7 +70,10 @@ async function exportOrderWorkbook(){try{const p=await buildExportPlan();if(p.un
 $('summaryDate').addEventListener('change',()=>{renderSummary();startSummaryLive();previewOrderExport()})
 function key(){return `kos-daily-v06-${formType}-${station}-${$('date').value}`}
 function render(){const data=formType==='central'?centralData[station]:prepData[station];$('items').innerHTML=data.map((r,i)=>formType==='central'?centralCard(r,i):prepCard(r,i)).join('')}
-function isRibeyePackItem(r){return station==='s1'&&/肋眼/.test(r[0])&&/公斤|kg/i.test(r[0])}
+// 三家店的肋眼顯示名稱不完全相同（例如「修清肋眼／公斤」或
+// 「肋眼牛排 454G／塊」），只要是 S1 肋眼都統一用盤包輸入，
+// 再以每盤包 0.47 KG 換算。不要再用品名是否含「公斤」判斷。
+function isRibeyePackItem(r){return station==='s1'&&/肋眼/.test(String(r?.[0]||''))}
 function conversionConfig(r){
   const name=r[0]||'', no=Number(r[5]);
   if(station==='s2'&&(no===59||/紅蝦高湯/.test(name)))return {mode:'shrimp',aFactor:1,bFactor:2/3,aLabel:'今日儲位（BAG）',bLabel:'今日站上（蝦醬／桶）',totalLabel:'今日總計（BAG）',note:'今日站上每 3 桶蝦醬換算為 2 BAG 紅蝦高湯；總計統一以 BAG 計算。',stepA:'0.01',stepB:'0.01'};
@@ -97,4 +100,4 @@ async function load(){startLiveSync()}
 async function clearToday(){if(!confirm('確定清除這一天的盤點資料？所有裝置都會一起清除。'))return;stopLiveSync();localStorage.removeItem(key());try{await liveRef().delete()}catch(e){console.error(e);alert('雲端清除失敗，請稍後再試');startLiveSync();return}$('person').value='';render();startLiveSync();alert('已清除雲端盤點資料')}
 $('formPanel').addEventListener('input',scheduleAutoSave);
 $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await loadDailyContext($('date').value);$('hint').textContent=formType==='central'?`已帶入 ${previousLabel} 昨日盤點與 ${deliveryLabel} 今日到貨。若昨日無資料，系統不會改抓更早日期。`:'請依畫面單位輸入目前站上實際庫存，可輸入小數（例如 2.5 盒）。儲存後 Weekly 會依規格換算原物料。';render();load()}});
-</script><script src="store-defaults.js?v=20260810-cold-greens-v1"></script><script src="item-settings.js?v=20260809-v2"></script><script src="daily-settings-runtime.js?v=20260809-dome-s1-v1"></script></body></html>
+</script><script src="store-defaults.js?v=20260820-ribeye-three-store-v1"></script><script src="item-settings.js?v=20260809-v2"></script><script src="daily-settings-runtime.js?v=20260820-ribeye-three-store-v1"></script></body></html>
