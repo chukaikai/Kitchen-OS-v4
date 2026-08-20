@@ -776,7 +776,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">全站對照修正版 2026-08-17</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">全站交叉檢查修正版 2026-08-19</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -966,7 +966,7 @@ const STATIONS = {
       ["142030SS", "球芽甘藍/公斤", "Kg / 公斤"],
       ["143001SS", "奶油萵苣/公斤", "Kg / 公斤"],
       ["162062CK", "粉紅胡椒140G/BOT .", "Btl / 瓶"],
-      ["181003SS", "黃檸檬/公斤", "Kg / 公斤"],
+      ["produce-yellow-lemon", "黃檸檬/公斤", "Kg / 公斤"],
       ["121024SS", "大包裝番茄醬Ketchup 3.23Kg(bag/box)", "Bag / 袋"],
       ["162001SS", "DOC瑪薩拉葡萄酒17% 750ml/BTL", "Btl / 瓶"],
       ["162023SS", "巴沙米可醋5L/BOT", "Btl / 瓶"],
@@ -1262,8 +1262,22 @@ const PREP_TO_WEEKLY = {
       sources: [[13, 0.065]],
       note: "醃綜合蕃茄：每盒使用乾蔥0.065kg；百里香與EVO不回推",
     },
-    { order: 27, sourceName: "檸檬油醋", sources: [[25, 0.25]] },
-    { order: 29, sourceName: "玉米沙拉", sources: [[15, 0.25]] },
+    {
+      targetCode: "113002SS",
+      targetName: "綠胡椒臘腸",
+      sourceName: "綠胡椒臘腸",
+      order: 27,
+      sources: [[25, 0.25]],
+      note: "綠胡椒臘腸：每盒250g，4盒＝1kg",
+    },
+    {
+      targetCode: "171005SS",
+      targetName: "切達塊",
+      sourceName: "切達起司丁",
+      order: 29,
+      sources: [[15, 0.25]],
+      note: "切達起司丁：每盒250g，4盒＝1kg",
+    },
     { order: 34, sourceName: "小黃瓜片", sources: [[6, 0.4]] },
     { order: 36, sourceName: "紫洋蔥絲", sources: [[8, 0.25]] },
     { order: 37, sourceNames: ["西芹片", "西芹半月片"], sources: [[18, 0.25], [24, 0.25]] },
@@ -1820,6 +1834,7 @@ if (KitchenStore.current) {
   const lamb = 13;
   const mushroomSauce = 26;
   const s1SalmonItem = ensureStationWeeklyItem("s1", "131002SS", "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱", "Ea / 個");
+  const s1ParsleyItem = ensureStationWeeklyItem("s1", "181003SS", "平葉巴西里/公斤", "Kg / 公斤");
   const s1EggplantItem = ensureStationWeeklyItem("s1", "142018SS", "圓茄/公斤", "Kg / 公斤");
   const s1ThymeItem = ensureStationWeeklyItem("s1", "145006SS", "百里香/公斤", "Kg / 公斤");
   const s1RosemaryItem = ensureStationWeeklyItem("s1", "181004SS", "迷迭香/公斤", "Kg / 公斤");
@@ -1833,34 +1848,42 @@ if (KitchenStore.current) {
       note: "站上盤重量；200g＝1袋",
     };
   }
+  WEEKLY_CONVERSIONS.s1[s1ParsleyItem.order] = {
+    storageFactor: 1,
+    stationFactor: 1 / 1000,
+    storageUnit: "kg",
+    stationUnit: "g",
+    note: "帶梗巴西里以g盤點；1000g＝1kg",
+  };
   PREP_TO_WEEKLY.s1 = [
     { targetCode: "CKM000002", targetName: "舒肥牛小排", sourceName: "分牛小排", sources: [[16, 0.21]], note: "分牛小排：備料盤份；每份210g＝0.21kg" },
     { targetCode: "CKM000001", targetName: "舒肥牛肋條", sourceName: "分牛肋", sources: [[7, 0.11]], note: "分牛肋條：備料盤份；每份110g＝0.11kg" },
     { targetCode: "CKMM000001", targetName: "舒肥雞腿", sourceName: "分雞腿", sources: [[6, 0.11]], note: "分雞腿：備料盤份；每份110g＝0.11kg" },
-    { targetCode: "142016SS", targetName: "香菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
-    { targetCode: "142015SS", targetName: "蘑菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
-    { targetCode: "142017SS", targetName: "鴻禧菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
+    { targetCode: "142016SS", targetName: "香菇", sourceName: "熟混菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推香菇1kg" },
+    { targetCode: "142015SS", targetName: "蘑菇", sourceName: "熟混菇", sources: [[cookedMushroom, 1 / 686]], note: "熟混菇：每686g回推洋菇1kg" },
+    { targetCode: "142017SS", targetName: "鴻禧菇", sourceName: "熟混菇", sources: [[cookedMushroom, 6 / 686]], note: "熟混菇：每686g回推鴻禧菇6包" },
     { targetCode: "CKH000012", targetName: "褐色雞湯", sourceName: "牛汁", sources: [[beefJus, 0.25]], note: "牛汁：每盒100g含褐色雞湯50g；回推200G／包褐色雞湯0.25包（站上顯示50g）" },
-    { targetCode: "111009CK", targetName: "修清肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
-    { targetCode: "CKMM50004", targetName: "舒肥羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
-    { targetCode: "142013SS", targetName: "白皮馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
-    { targetCode: "", targetName: "玉米糖膠液", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
+    { targetCode: "111009CK", targetName: "修清肋眼", sourceName: "退冰肋眼", sources: [[ribeye, 1]], note: "退冰肋眼：備料盤包，回到周盤站上包數" },
+    { targetCode: "CKMM50004", targetName: "舒肥羊排", sourceName: "退冰羊排", sources: [[lamb, 1]], note: "退冰羊排：備料盤包，回到周盤站上包數" },
+    { targetCode: "142013SS", targetName: "白皮馬鈴薯", sourceName: "馬鈴薯", sources: [[potato, 0.2]], note: "馬鈴薯：每份200g，回推白皮馬鈴薯0.2kg" },
+    { targetCode: "", targetName: "玉米糖膠液", sourceName: "玉米糖膠", sources: [[3, 1]], note: "玉米糖膠：備料1盒（1K）回推玉米糖膠液1包" },
     { targetCode: "168021SS", targetName: "大漢板豆腐", sourceName: "切豆腐", sources: [[10, 1]], note: "切豆腐：備料1盒回推大漢板豆腐1盒" },
-    { targetCode: "141001SS", targetName: "牛蕃茄", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
-    { targetCode: "143001SS", targetName: "奶油萵苣", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
-    { targetCode: s1EggplantItem.code, targetName: "圓茄", sources: [[21, 0.28]], note: "茄子：每份回推圓茄0.28kg" },
+    { targetCode: "141001SS", targetName: "牛蕃茄", sourceName: "漢堡菜", sources: [[9, 0.03]], note: "漢堡菜：每份含牛蕃茄30g，回推0.03kg" },
+    { targetCode: "143001SS", targetName: "奶油萵苣", sourceName: "漢堡菜", sources: [[9, 0.01]], note: "漢堡菜：每份含奶油萵苣10g，回推0.01kg" },
+    { targetCode: s1EggplantItem.code, targetName: "圓茄", sourceName: "茄子", sources: [[21, 0.28]], note: "茄子：每份回推圓茄0.28kg" },
     { targetCode: "142028SS", targetName: "青花菜", sourceName: "豆腐菜", sources: [[12, 0.03]], note: "豆腐菜：每份含青花菜0.03kg" },
     { targetCode: "142030SS", targetName: "球芽甘藍", sourceName: "豆腐菜", sources: [[12, 0.03]], note: "豆腐菜：每份含球芽甘藍0.03kg" },
-    { targetCode: "142029SS", targetName: "秋葵", sources: [[11, 0.3]], note: "切秋葵：每盒300g，回推秋葵0.3kg" },
-    { targetCode: "145001SS", targetName: "蝦夷蔥", sources: [[1, 0.025]], note: "蝦夷蔥：每盒25g，回推0.025kg" },
-    { targetCode: "145002SS", targetName: "蒔蘿", sources: [[19, 0.01]], note: "蒔蘿：每盒10g，回推0.01kg" },
-    { targetCode: "142004SS", targetName: "乾蔥", sources: [[4, 0.05]], note: "甘蔥碎：每盒50g，回推乾蔥0.05kg" },
-    { targetCode: "161014SS", targetName: "法式芥", sources: [[17, 0.17]], note: "蛋刷醬：每盒含法式芥末子醬170g，回推1kg／罐的0.17罐" },
-    { targetCode: "184010SS", targetName: "玉米粉", sources: [[17, 70 / 375]], note: "蛋刷醬：每盒含玉米粉70g，回推375g／盒" },
-    { targetName: "殺菌蛋白液", sources: [[17, 100 / 970]], note: "蛋刷醬：每盒含蛋白液100g，回推970g／罐" },
-    { targetCode: "162023SS", targetName: "巴沙米可醋", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
-    { targetCode: "162001SS", targetName: "瑪薩拉", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
-    { targetCode: "161004SS", targetName: "料理白酒", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
+    { targetCode: "142029SS", targetName: "秋葵", sourceName: "切秋葵", sources: [[11, 0.3]], note: "切秋葵：每盒300g，回推秋葵0.3kg" },
+    { targetCode: "145001SS", targetName: "蝦夷蔥", sourceName: "蝦夷蔥", sources: [[1, 0.025]], note: "蝦夷蔥：每盒25g，回推0.025kg" },
+    { targetCode: "145002SS", targetName: "蒔蘿", sourceName: "蒔蘿", sources: [[19, 0.01]], note: "蒔蘿：每盒10g，回推0.01kg" },
+    { targetCode: "142004SS", targetName: "乾蔥", sourceName: "甘蔥碎", sources: [[4, 0.05]], note: "甘蔥碎：每盒50g，回推乾蔥0.05kg" },
+    { targetCode: "161014SS", targetName: "法式芥", sourceName: "蛋刷醬", sources: [[17, 0.17]], note: "蛋刷醬：每盒含法式芥末子醬170g，回推1kg／罐的0.17罐" },
+    { targetCode: "184010SS", targetName: "玉米粉", sourceName: "蛋刷醬", sources: [[17, 70 / 375]], note: "蛋刷醬：每盒含玉米粉70g，回推375g／盒" },
+    { targetName: "殺菌蛋白液", sourceName: "蛋刷醬", sources: [[17, 100 / 970]], note: "蛋刷醬：每盒含蛋白液100g，回推970g／罐" },
+    { targetCode: "162023SS", targetName: "巴沙米可醋", sourceName: "炒菇調味汁", sources: [[mushroomSauce, 0.5 / 5000]], note: "炒菇調味汁：50%巴沙米可醋，換算5L／瓶" },
+    { targetCode: "162001SS", targetName: "瑪薩拉", sourceName: "炒菇調味汁", sources: [[mushroomSauce, 0.25 / 750]], note: "炒菇調味汁：25%瑪薩拉酒，換算750ml／瓶" },
+    { targetCode: "161004SS", targetName: "料理白酒", sourceName: "炒菇調味汁", sources: [[mushroomSauce, 0.25 / 5000]], note: "炒菇調味汁：25%料理白酒，換算5L／瓶" },
+    { targetCode: s1ParsleyItem.code, targetName: "平葉巴西里", sourceName: "帶梗巴西里", sources: [[5, 0.001]], note: "帶梗巴西里：備料以g盤點，1000g＝1kg" },
     { targetCode: s1SalmonItem.code, targetName: "鮭魚菲力", sourceName: "切鮭魚", sources: [[8, 1]], note: "切鮭魚：備料盤份；1份回推鮭魚菲力1個" },
   ].filter((rule) => {
     if (rule.sourcesAny) return rule.sourcesAny.some((index) => index >= 0);

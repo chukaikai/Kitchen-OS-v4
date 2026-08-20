@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kitchen-os-v41-weekly-all-mappings-20260817-v1';
+const CACHE_NAME = 'kitchen-os-v41-weekly-full-crosscheck-20260819-v1';
 
 const ASSETS = [
   './',
