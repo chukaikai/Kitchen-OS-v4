@@ -48,8 +48,17 @@
     return cloudReady;
   }
   function key(type,station){return type+":"+station}
-  function get(type,station){return read()[key(type,station)]||{order:[],hidden:[],custom:[]}}
-  function set(type,station,value){const all=read();all[key(type,station)]=value;write(all)}
+  function normalizeCfg(value){
+    const v=(value&&typeof value==="object")?value:{};
+    return {
+      ...v,
+      order:Array.isArray(v.order)?v.order:[],
+      hidden:Array.isArray(v.hidden)?v.hidden:[],
+      custom:Array.isArray(v.custom)?v.custom:[]
+    };
+  }
+  function get(type,station){return normalizeCfg(read()[key(type,station)])}
+  function set(type,station,value){const all=read();all[key(type,station)]=normalizeCfg(value);write(all)}
   function idFor(type,item,index){
     if(type==="weekly") return item._customId||("base:"+(item.code||"")+":"+item.order+":"+item.name);
     return item._customId||item[6]||("base:"+(item[5]||index+1)+":"+item[0]+":"+(item[1]||""));
