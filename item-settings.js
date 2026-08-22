@@ -25,7 +25,10 @@
   function write(data){
     writeLocal(data);
     const ref=cloudDoc();
-    if(ref) ref.set({settings:data,updatedAt:new Date().toISOString()},{merge:true}).catch(e=>console.error("品項設定雲端同步失敗",e));
+    // Firestore 不支援巢狀陣列。中央盤點自訂品項本身是陣列，
+    // 放進 custom[] 會形成 array-of-arrays，因此雲端改存 JSON 字串。
+    if(ref) ref.set({settingsJson:JSON.stringify(data),updatedAt:new Date().toISOString()},{merge:true})
+      .catch(e=>console.error("品項設定雲端同步失敗",e));
   }
   function configureCloud(db){
     if(!db||!window.KitchenStore?.current){cloudReadyResolve?.();return cloudReady}
@@ -34,14 +37,20 @@
     const ref=cloudDoc();
     let first=true;
     cloudUnsub=ref.onSnapshot(snap=>{
-      const remote=snap.exists?snap.data()?.settings:null;
+      const d=snap.exists?snap.data():null;
+      let remote=null;
+      if(d?.settingsJson){
+        try{ remote=JSON.parse(d.settingsJson); }catch(e){ console.warn("品項設定 JSON 解析失敗",e); }
+      }
+      // 相容舊版曾以 settings 物件儲存的資料
+      if(!remote && d?.settings && typeof d.settings==="object") remote=d.settings;
       if(remote&&typeof remote==="object"){
         const before=JSON.stringify(read());
         const after=JSON.stringify(remote);
         if(before!==after){writeLocal(remote);if(!first)setTimeout(()=>location.reload(),50)}
       }else if(first){
         const local=read();
-        if(Object.keys(local).length) ref.set({settings:local,updatedAt:new Date().toISOString()},{merge:true}).catch(console.error);
+        if(Object.keys(local).length) ref.set({settingsJson:JSON.stringify(local),updatedAt:new Date().toISOString()},{merge:true}).catch(console.error);
       }
       first=false;cloudReadyResolve?.();cloudReadyResolve=null;
     },e=>{console.warn("品項設定雲端讀取失敗，暫用本機",e);cloudReadyResolve?.();cloudReadyResolve=null});
