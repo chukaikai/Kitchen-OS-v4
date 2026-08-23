@@ -700,8 +700,34 @@ tbody tr:hover .total-cell {
   let cloudDb=null,cloudUnsub=null;
   function writeLocal(data){localStorage.setItem(KEY,JSON.stringify(data))}
   function cloudDoc(){const sid=window.KitchenStore?.current?.id;return cloudDb&&sid?cloudDb.collection("itemSettings").doc(sid):null}
-  function write(data){writeLocal(data);const ref=cloudDoc();if(ref)ref.set({settings:data,updatedAt:new Date().toISOString()},{merge:true}).catch(e=>console.error("品項設定雲端同步失敗",e))}
-  function configureCloud(db){if(!db||!window.KitchenStore?.current)return Promise.resolve();cloudDb=db;if(cloudUnsub)cloudUnsub();const ref=cloudDoc();return new Promise(resolve=>{let first=true;cloudUnsub=ref.onSnapshot(snap=>{const remote=snap.exists?snap.data()?.settings:null;if(remote&&typeof remote==="object"){const before=JSON.stringify(read()),after=JSON.stringify(remote);if(before!==after){writeLocal(remote);setTimeout(()=>location.reload(),50)}}else if(first){const local=read();if(Object.keys(local).length)ref.set({settings:local,updatedAt:new Date().toISOString()},{merge:true}).catch(console.error)}first=false;resolve()},e=>{console.warn("品項設定雲端讀取失敗，暫用本機",e);resolve()})})}
+  function write(data){
+    writeLocal(data);
+    const ref=cloudDoc();
+    if(ref) ref.set({settingsJson:JSON.stringify(data),updatedAt:new Date().toISOString()},{merge:true})
+      .catch(e=>console.error("品項設定雲端同步失敗",e));
+  }
+  function configureCloud(db){
+    if(!db||!window.KitchenStore?.current)return Promise.resolve();
+    cloudDb=db;
+    if(cloudUnsub)cloudUnsub();
+    const ref=cloudDoc();
+    return new Promise(resolve=>{let first=true;cloudUnsub=ref.onSnapshot(snap=>{
+      const d=snap.exists?snap.data():null;
+      let remote=null;
+      if(d?.settingsJson){
+        try{remote=JSON.parse(d.settingsJson)}catch(e){console.warn("品項設定 JSON 解析失敗",e)}
+      }
+      if(!remote && d?.settings && typeof d.settings==="object") remote=d.settings;
+      if(remote&&typeof remote==="object"){
+        const before=JSON.stringify(read()),after=JSON.stringify(remote);
+        if(before!==after){writeLocal(remote);setTimeout(()=>location.reload(),50)}
+      }else if(first){
+        const local=read();
+        if(Object.keys(local).length)ref.set({settingsJson:JSON.stringify(local),updatedAt:new Date().toISOString()},{merge:true}).catch(console.error)
+      }
+      first=false;resolve();
+    },e=>{console.warn("品項設定雲端讀取失敗，暫用本機",e);resolve()})})
+  }
   function key(type,station){return type+":"+station}
   function get(type,station){return read()[key(type,station)]||{order:[],hidden:[],custom:[]}}
   function set(type,station,value){const all=read();all[key(type,station)]=value;write(all)}
@@ -728,7 +754,14 @@ tbody tr:hover .total-cell {
       localStorage.setItem(PRODUCE_ORDER_MARKER,"1");
     }
     const ids=[...(cfg.order||[]),...byId.keys()].filter((id,i,a)=>a.indexOf(id)===i&&byId.has(id));
-    return ids.filter(id=>!hidden.has(id)).map(id=>byId.get(id));
+    const result=ids.filter(id=>!hidden.has(id)).map(id=>byId.get(id));
+    // 安全保護：若設定異常把整站全部隱藏，週盤不可呈現空白。
+    // 明日現場盤點優先保留完整基礎品項；之後仍可在排序/顯示設定重新調整。
+    if(type==="weekly" && base.length && result.length===0){
+      console.warn("Weekly 品項設定異常：整站為空，已自動恢復基礎品項",station);
+      return base.slice();
+    }
+    return result;
   }
   function openManager(type,station,base,onDone){
     const cfg=get(type,station), all=new Map();
@@ -780,7 +813,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">全站交叉檢查修正版 2026-08-19</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">週盤穩定恢復版 2026-08-23</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
