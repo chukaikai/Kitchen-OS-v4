@@ -729,8 +729,21 @@ tbody tr:hover .total-cell {
     },e=>{console.warn("品項設定雲端讀取失敗，暫用本機",e);resolve()})})
   }
   function key(type,station){return type+":"+station}
-  function get(type,station){return read()[key(type,station)]||{order:[],hidden:[],custom:[]}}
-  function set(type,station,value){const all=read();all[key(type,station)]=value;write(all)}
+  function normalizeCfg(value){
+    const c=(value&&typeof value==="object"&&!Array.isArray(value))?value:{};
+    // 相容舊版／不同裝置曾寫入的格式；任何異常欄位都回復為空陣列，
+    // 避免 .forEach / 展開運算直接中斷整張 Weekly。
+    if(!Array.isArray(c.order)) c.order=[];
+    if(!Array.isArray(c.hidden)) c.hidden=[];
+    if(!Array.isArray(c.custom)){
+      if(typeof c.custom==="string"){
+        try{const parsed=JSON.parse(c.custom);c.custom=Array.isArray(parsed)?parsed:[]}catch(_){c.custom=[]}
+      }else c.custom=[];
+    }
+    return c;
+  }
+  function get(type,station){return normalizeCfg(read()[key(type,station)])}
+  function set(type,station,value){const all=read();all[key(type,station)]=normalizeCfg(value);write(all)}
   function idFor(type,item,index){
     if(type==="weekly") return item._customId||("base:"+(item.code||"")+":"+item.order+":"+item.name);
     return item._customId||item[6]||("base:"+(item[5]||index+1)+":"+item[0]+":"+(item[1]||""));
@@ -738,7 +751,7 @@ tbody tr:hover .total-cell {
   function apply(type,station,base){
     const cfg=get(type,station), hidden=new Set(cfg.hidden||[]), byId=new Map();
     base.forEach((item,index)=>byId.set(idFor(type,item,index),item));
-    (cfg.custom||[]).forEach((item,index)=>byId.set(idFor(type,item,index),item));
+    (Array.isArray(cfg.custom)?cfg.custom:[]).forEach((item,index)=>byId.set(idFor(type,item,index),item));
     if(type==="weekly"&&station==="produce"&&window.KitchenStore?.current&&!localStorage.getItem(PRODUCE_ORDER_MARKER)){
       const wanted=PRODUCE_ORDERS[window.KitchenStore.current.id]||[];
       const rank=new Map(wanted.map((code,index)=>[code,index]));
@@ -766,7 +779,7 @@ tbody tr:hover .total-cell {
   function openManager(type,station,base,onDone){
     const cfg=get(type,station), all=new Map();
     base.forEach((item,index)=>all.set(idFor(type,item,index),item));
-    (cfg.custom||[]).forEach((item,index)=>all.set(idFor(type,item,index),item));
+    (Array.isArray(cfg.custom)?cfg.custom:[]).forEach((item,index)=>all.set(idFor(type,item,index),item));
     let ids=[...(cfg.order||[]),...all.keys()].filter((id,i,a)=>a.indexOf(id)===i&&all.has(id));
     const hidden=new Set(cfg.hidden||[]);
     const shade=document.createElement("div");
@@ -813,7 +826,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">週盤穩定恢復版 2026-08-23</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">週盤資料相容修正版 v8 2026-08-23</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
