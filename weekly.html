@@ -826,7 +826,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">週盤資料相容修正版 v8 2026-08-23</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">週盤保底直載版 v9 2026-08-24</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -1188,8 +1188,10 @@ const BASE_STATION_ITEMS = Object.fromEntries(
   Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
 );
 
+// v9 保底：週盤工作站品項一律先直接使用內建清單。
+// 不讓雲端顯示/排序設定阻斷明日週盤；排序設定可待盤點完成後再恢復。
 Object.keys(STATIONS).forEach((stationKey) => {
-  STATIONS[stationKey].items = KitchenItemSettings.apply("weekly", stationKey, BASE_STATION_ITEMS[stationKey]);
+  STATIONS[stationKey].items = BASE_STATION_ITEMS[stationKey].map((item) => ({ ...item }));
 });
 
 const inventoryBody = document.querySelector("#inventoryBody");
@@ -1228,7 +1230,8 @@ if (window.firebase?.initializeApp && window.firebase?.firestore) {
 // 舊版 service worker 可能短暫提供尚未包含 configureCloud 的
 // item-settings.js。即使快取檔案新舊混用，也必須先完成 Weekly 初始化，
 // 不能讓整張品項表與日期一起空白。
-if (db) KitchenItemSettings.configureCloud?.(db);
+// v9 週盤保底期間暫停品項設定雲端監聽，避免遠端異常設定重新載入空表。
+// if (db) KitchenItemSettings.configureCloud?.(db);
 db?.enablePersistence({ synchronizeTabs: true }).catch((error) => {
   if (error?.code !== "failed-precondition" && error?.code !== "unimplemented") {
     console.warn("離線同步暫存未啟用", error);
@@ -2955,7 +2958,18 @@ stationTabs.addEventListener("click", (event) => {
   renderItems();
 });
 
-renderItems();
+try {
+  renderItems();
+  if (!inventoryBody.querySelector("tr") && STATIONS[activeStation]?.items?.length) {
+    throw new Error(`Cold 內建品項 ${STATIONS[activeStation].items.length} 項，但畫面列數為 0`);
+  }
+} catch (error) {
+  console.error("Weekly 初始載入失敗", error);
+  const msg = document.createElement("div");
+  msg.style.cssText = "margin:16px;padding:14px;border:2px solid #b42318;border-radius:12px;background:#fff3f2;color:#7a271a;font-weight:700";
+  msg.textContent = `週盤載入錯誤：${error?.message || error}`;
+  inventoryBody.parentElement?.parentElement?.prepend(msg);
+}
 ["cold", "s1", "s2", "pizza", "produce"].forEach(startWeeklyRealtime);
 setTableHead("station");
 inventoryDate.value = dateKey();
