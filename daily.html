@@ -125,7 +125,7 @@ function conversionConfig(r){
   const name=r[0]||'', no=Number(r[5]);
   if(station==='s2'&&(no===59||/紅蝦高湯/.test(name)))return {mode:'shrimp',aFactor:1,bFactor:2/3,aLabel:'今日儲位（BAG）',bLabel:'今日站上（蝦醬／桶）',totalLabel:'今日總計（BAG）',note:'今日站上每 3 桶蝦醬換算為 2 BAG 紅蝦高湯；總計統一以 BAG 計算。',stepA:'0.01',stepB:'0.01'};
   if(station==='pizza'&&(no===34||/義式絞肉/.test(name)))return {mode:'italian',aFactor:1,bFactor:0.5,aLabel:'今日儲位（包）',bLabel:'今日站上（盒）',totalLabel:'今日總計（包）',note:'今日站上每 2 盒義式絞肉換算為 1 包；總計統一以包計算。',stepA:'0.01',stepB:'0.01'};
-  if(station==='pizza'&&(no===32||/培根/.test(name)))return {mode:'bacon',aFactor:0.7,bFactor:0.7,aLabel:'今日儲位（包）',bLabel:'今日站上（包）',totalLabel:'今日總計（KG）',note:'今日儲位與站上皆以包數輸入，每包自動換算 0.7 KG；總計統一以 KG 計算。',stepA:'0.01',stepB:'0.01'};
+  if(station==='pizza'&&(no===32||/培根/.test(name)))return {mode:'bacon',sourceUnit:'KG',calcUnit:'KG',aFactor:0.7,bFactor:0.7,aLabel:'今日儲位（包）',bLabel:'今日站上（包）',totalLabel:'今日總計（KG）',note:'昨日盤點、今日到貨、盤點前應有皆以 KG 計算；今日儲位與站上以包數輸入，每包自動換算 0.7 KG。',stepA:'0.01',stepB:'0.01'};
   if(isRibeyePackItem(r))return {mode:'ribeye',aFactor:0.47,bFactor:0.47,aLabel:'今日儲位（包）',bLabel:'今日站上（包）',totalLabel:'今日總計（KG）',note:'輸入包數後，系統自動以「包數 × 0.47 KG」換算；主管總表及叫貨表會帶入 KG。',stepA:'0.01',stepB:'0.01'};
   if(isPaperTowelItem(r))return {mode:'paper-towel',aFactor:0.1,bFactor:0,aLabel:'未使用庫存（卷）',bLabel:'使用中（不計）',totalLabel:'今日總計（包）',note:'只盤未使用的完整卷數；使用中的紙抹布不計。系統以「卷數 ÷ 10」換算成包。',stepA:'0.01',stepB:'0.01',bDisabled:true};
   return null;
@@ -140,11 +140,11 @@ function keepTwoDecimals(el){
   }
   el.value=v;
 }
-function centralCard(r,i){const [name,unit,storage,yesterday,delivery,no]=r,missing=yesterday===null,cfg=conversionConfig(r),expected=missing?'—':fmt(yesterday+delivery);if(cfg)return `<article class="item ${missing?'warn':''}" data-i="${i}" data-mode="${cfg.mode}" data-afactor="${cfg.aFactor}" data-bfactor="${cfg.bFactor}"><h3>${no}. ${name}</h3><div class="sub">儲位：${storage}　換算盤點</div><div class="source-row"><div class="source-box">${previousLabel} 昨日盤點<b class="${missing?'missing':''}">${missing?'未提供':fmt(yesterday)} ${unit}</b></div><div class="source-box">${deliveryLabel} 今日到貨<b>${fmt(delivery)} ${unit}</b></div><div class="source-box">盤點前應有<b>${expected}${expected==='—'?'':' '+unit}</b></div></div><div class="validation-grid"><div class="field"><label>${cfg.aLabel}<input inputmode="decimal" class="a" type="text" autocomplete="off" oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>${cfg.bLabel}<input inputmode="decimal" class="b" type="text" autocomplete="off" ${cfg.bDisabled?'disabled value="0"':''} oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>${cfg.totalLabel}<input class="sum" readonly tabindex="-1"></label></div></div><div class="conversion-note">${cfg.note}</div><div class="usage"><span class="used">推算使用量：—</span><span class="status">${missing?'⚠ 昨日數據缺漏':'待輸入'}</span></div></article>`;return `<article class="item ${missing?'warn':''}" data-i="${i}"><h3>${no}. ${name}</h3><div class="sub">儲位：${storage}　單位：${unit}</div><div class="source-row"><div class="source-box">${previousLabel} 昨日盤點<b class="${missing?'missing':''}">${missing?'未提供':fmt(yesterday)}</b></div><div class="source-box">${deliveryLabel} 今日到貨<b>${fmt(delivery)}</b></div><div class="source-box">盤點前應有<b>${expected}</b></div></div><div class="validation-grid"><div class="field"><label>今日儲位<input inputmode="decimal" class="a" type="text" autocomplete="off" oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>今日站上<input inputmode="decimal" class="b" type="text" autocomplete="off" oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>今日總計<input class="sum" readonly tabindex="-1"></label></div></div><div class="usage"><span class="used">推算使用量：—</span><span class="status">${missing?'⚠ 昨日數據缺漏':'待輸入'}</span></div></article>`}
+function centralCard(r,i){const [name,unit,storage,yesterday,delivery,no]=r,missing=yesterday===null,cfg=conversionConfig(r),expected=missing?'—':fmt(yesterday+delivery);if(cfg){const sourceUnit=cfg.sourceUnit||unit;return `<article class="item ${missing?'warn':''}" data-i="${i}" data-mode="${cfg.mode}" data-afactor="${cfg.aFactor}" data-bfactor="${cfg.bFactor}" data-calcunit="${cfg.calcUnit||unit}"><h3>${no}. ${name}</h3><div class="sub">儲位：${storage}　換算盤點</div><div class="source-row"><div class="source-box">${previousLabel} 昨日盤點<b class="${missing?'missing':''}">${missing?'未提供':fmt(yesterday)} ${sourceUnit}</b></div><div class="source-box">${deliveryLabel} 今日到貨<b>${fmt(delivery)} ${sourceUnit}</b></div><div class="source-box">盤點前應有<b>${expected}${expected==='—'?'':' '+sourceUnit}</b></div></div><div class="validation-grid"><div class="field"><label>${cfg.aLabel}<input inputmode="decimal" class="a" type="text" autocomplete="off" oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>${cfg.bLabel}<input inputmode="decimal" class="b" type="text" autocomplete="off" ${cfg.bDisabled?'disabled value="0"':''} oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>${cfg.totalLabel}<input class="sum" readonly tabindex="-1"></label></div></div><div class="conversion-note">${cfg.note}</div><div class="usage"><span class="used">推算使用量：—</span><span class="status">${missing?'⚠ 昨日數據缺漏':'待輸入'}</span></div></article>`;}return `<article class="item ${missing?'warn':''}" data-i="${i}"><h3>${no}. ${name}</h3><div class="sub">儲位：${storage}　單位：${unit}</div><div class="source-row"><div class="source-box">${previousLabel} 昨日盤點<b class="${missing?'missing':''}">${missing?'未提供':fmt(yesterday)}</b></div><div class="source-box">${deliveryLabel} 今日到貨<b>${fmt(delivery)}</b></div><div class="source-box">盤點前應有<b>${expected}</b></div></div><div class="validation-grid"><div class="field"><label>今日儲位<input inputmode="decimal" class="a" type="text" autocomplete="off" oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>今日站上<input inputmode="decimal" class="b" type="text" autocomplete="off" oninput="keepTwoDecimals(this);calcCentral(${i})"></label></div><div class="field"><label>今日總計<input class="sum" readonly tabindex="-1"></label></div></div><div class="usage"><span class="used">推算使用量：—</span><span class="status">${missing?'⚠ 昨日數據缺漏':'待輸入'}</span></div></article>`}
 function prepCard(r,i){if(station==='s2'&&hiddenPrepItems.has(r[0]))return `<article class="item" data-i="${i}" hidden><input class="actual" type="hidden"></article>`;return `<article class="item" data-i="${i}"><h3>${r[0]}</h3><div class="sub">盤點單位：${r[1]||'—'}　效期：${r[2]||'—'}</div><div class="cols"><div class="field"><label>目前站上庫存（${r[1]||'單位'}）<input inputmode="decimal" class="actual" type="number" min="0" step="any" placeholder="0" oninput="calcPrep(${i})"></label></div></div><div class="total"><span>可輸入小數，例如 2.5</span><span class="status">待輸入</span></div></article>`}
 function n(el){const v=parseFloat(el.value);return Number.isFinite(v)?v:0}
 function fmt(v){return Number.isFinite(v)?Number(v.toFixed(2)).toString():'—'}
-function calcCentral(i){const c=document.querySelector(`[data-i="${i}"]`),r=centralData[station][i],aFactor=Number(c.dataset.afactor||1),bFactor=Number(c.dataset.bfactor||1),av=c.querySelector('.a').value,bv=c.querySelector('.b').value;const a=Math.round(n(c.querySelector('.a'))*aFactor*100)/100,b=Math.round(n(c.querySelector('.b'))*bFactor*100)/100,total=Math.round((a+b)*100)/100;c.querySelector('.sum').value=(av===''&&bv==='')?'':fmt(total);const yesterday=r[3],delivery=r[4];if(av===''&&bv===''){c.querySelector('.used').textContent='推算使用量：—';c.querySelector('.status').textContent=yesterday===null?'⚠ 昨日數據缺漏':'待輸入';c.classList.toggle('warn',yesterday===null);return}if(yesterday===null){c.querySelector('.used').textContent='推算使用量：無法計算';c.querySelector('.status').textContent='⚠ 昨日數據缺漏';c.classList.add('warn');return}const used=yesterday+delivery-total;c.querySelector('.used').textContent=`推算使用量：${fmt(used)} ${r[1]}`;const abnormal=used<0;c.classList.toggle('warn',abnormal);c.querySelector('.status').textContent=abnormal?'⚠ 庫存高於應有':'✓ 已驗證'}
+function calcCentral(i){const c=document.querySelector(`[data-i="${i}"]`),r=centralData[station][i],aFactor=Number(c.dataset.afactor||1),bFactor=Number(c.dataset.bfactor||1),av=c.querySelector('.a').value,bv=c.querySelector('.b').value;const a=Math.round(n(c.querySelector('.a'))*aFactor*100)/100,b=Math.round(n(c.querySelector('.b'))*bFactor*100)/100,total=Math.round((a+b)*100)/100;c.querySelector('.sum').value=(av===''&&bv==='')?'':fmt(total);const yesterday=r[3],delivery=r[4];if(av===''&&bv===''){c.querySelector('.used').textContent='推算使用量：—';c.querySelector('.status').textContent=yesterday===null?'⚠ 昨日數據缺漏':'待輸入';c.classList.toggle('warn',yesterday===null);return}if(yesterday===null){c.querySelector('.used').textContent='推算使用量：無法計算';c.querySelector('.status').textContent='⚠ 昨日數據缺漏';c.classList.add('warn');return}const used=yesterday+delivery-total;const calcUnit=c.dataset.calcunit||r[1];c.querySelector('.used').textContent=`推算使用量：${fmt(used)} ${calcUnit}`;const abnormal=used<0;c.classList.toggle('warn',abnormal);c.querySelector('.status').textContent=abnormal?'⚠ 庫存高於應有':'✓ 已驗證'}
 function calcPrep(i){const c=document.querySelector(`[data-i="${i}"]`),av=c.querySelector('.actual').value,status=c.querySelector('.status');c.classList.remove('bad');if(status)status.textContent=av===''?'待輸入':'✓ 已盤點'}
 function centralRowId(row){if(!row)return '';const code=String(row[6]||'').trim();if(code)return 'code:'+code;return 'name:'+String(row[0]||'').normalize('NFKC').toLowerCase().replace(/[\s　]/g,'')}
 function savedCentralRow(saved,row,index){const rows=saved?.rows||[],id=centralRowId(row);const exact=rows.find(x=>x&&x.itemId===id);if(exact)return exact;const byName=rows.find(x=>x&&x.itemName&&String(x.itemName).normalize('NFKC')===String(row?.[0]||'').normalize('NFKC'));if(byName)return byName;return rows[index]||{}}
@@ -265,8 +265,20 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
     const d=Object.assign({},doc||{}), expectedByProductCode={}, valuesByProductCode={};
     const rows=Array.isArray(d.sourceRows)?d.sourceRows:[];
     const rowCode=new Map(rows.map(r=>[norm(r.name),String(r.productCode||codeForName(r.name)||'').trim()]));
-    Object.entries(d.expected||{}).forEach(([name,q])=>{const code=rowCode.get(norm(name))||codeForName(name),n=Number(q);if(code&&Number.isFinite(n))expectedByProductCode[code]=n;});
-    Object.entries(d.values||{}).forEach(([name,q])=>{const code=rowCode.get(norm(name))||codeForName(name),n=Number(q);if(code&&Object.prototype.hasOwnProperty.call(expectedByProductCode,code)&&Number.isFinite(n))valuesByProductCode[code]=n;});
+    Object.entries(d.expected||{}).forEach(([name,q])=>{
+      const nName=norm(name);
+      // v25：已確認的培根名稱固定優先 CKH000020。
+      // 不讓舊 sourceRows 內可能殘留的錯誤 productCode 蓋掉正確對應。
+      const code=nName.includes('培根')?'CKH000020':(rowCode.get(nName)||codeForName(name));
+      const n=Number(q);
+      if(code&&Number.isFinite(n)) expectedByProductCode[code]=n;
+    });
+    Object.entries(d.values||{}).forEach(([name,q])=>{
+      const nName=norm(name);
+      const code=nName.includes('培根')?'CKH000020':(rowCode.get(nName)||codeForName(name));
+      const n=Number(q);
+      if(code&&Object.prototype.hasOwnProperty.call(expectedByProductCode,code)&&Number.isFinite(n)) valuesByProductCode[code]=n;
+    });
     d.expectedByProductCode=expectedByProductCode;d.valuesByProductCode=valuesByProductCode;d.productCodeSchemaVersion=1;return d;
   }
   window.KOSProductCode={codeForName,migrateByProductCode,version:'v16-20260826'};
@@ -274,9 +286,20 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
     if(!x)return;const fixed=migrateByProductCode(x);importedCentral=fixed;
     try{localStorage.setItem('kos-import-central-current',JSON.stringify(fixed));}catch(e){}
     const exp=fixed.expectedByProductCode||{},vals=fixed.valuesByProductCode||{};
-    Object.values(centralData).flat().forEach(row=>{const code=String(row[6]||codeForName(row[0])||'').trim();if(!code||!Object.prototype.hasOwnProperty.call(exp,code)){row[4]=0;return;}const n=Number(vals[code]);row[4]=Number.isFinite(n)?n:0;});
+    const baconRaw=Object.entries(fixed.values||{}).find(([name])=>norm(name).includes('培根'));
+    const baconKg=baconRaw?Number(baconRaw[1]):NaN;
+    Object.values(centralData).flat().forEach(row=>{
+      const code=String(row[6]||codeForName(row[0])||'').trim();
+      if(code==='CKH000020'){
+        const byCode=Number(vals['CKH000020']);
+        row[4]=Number.isFinite(baconKg)?baconKg:(Number.isFinite(byCode)?byCode:0);
+        return;
+      }
+      if(!code||!Object.prototype.hasOwnProperty.call(exp,code)){row[4]=0;return;}
+      const n=Number(vals[code]);row[4]=Number.isFinite(n)?n:0;
+    });
   };
-  window.KOS_DELIVERY_MATCH_VERSION='v24-product-code-bacon-fix';
+  window.KOS_DELIVERY_MATCH_VERSION='v26-bacon-weight-kg';
 })();
 </script>
 </body></html>
