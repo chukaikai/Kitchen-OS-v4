@@ -302,4 +302,64 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
   window.KOS_DELIVERY_MATCH_VERSION='v26-bacon-weight-kg';
 })();
 </script>
+
+<script>
+/* Kitchen OS v27 — 全站今日到貨統一讀取層 */
+(function(){
+  const nrm=s=>String(s??'').normalize('NFKC').toLowerCase()
+    .replace(/[\s　]/g,'').replace(/[－–—_]/g,'-')
+    .replace(/公斤/g,'kg').replace(/公克/g,'g').replace(/／/g,'/');
+
+  window.applyDelivery=function(doc){
+    if(!doc)return;
+    importedCentral=doc;
+    try{localStorage.setItem('kos-import-central-current',JSON.stringify(doc));}catch(e){}
+
+    const expected=doc.expected||{}, values=doc.values||{};
+    const rows=Array.isArray(doc.sourceRows)?doc.sourceRows:[];
+    const expectedNames=new Set(Object.keys(expected).map(nrm));
+    const byCode=new Map(),bySeq=new Map(),byStable=new Map(),byName=new Map();
+
+    rows.forEach(r=>{
+      if(!r?.name)return;
+      const key=nrm(r.name);
+      if(!expectedNames.has(key)||!Object.prototype.hasOwnProperty.call(values,r.name))return;
+      const q=Number(values[r.name]);
+      if(!Number.isFinite(q))return;
+      const code=String(r.productCode||'').trim(),seq=Number(r.centralSeq);
+      if(code)byCode.set(code,q);
+      if(Number.isFinite(seq))bySeq.set(seq,q);
+      if(window.KOSStableItemId)byStable.set(window.KOSStableItemId.stableIdForName(r.name),q);
+      byName.set(key,q);
+    });
+
+    Object.entries(values).forEach(([name,raw])=>{
+      const key=nrm(name),q=Number(raw);
+      if(!expectedNames.has(key)||!Number.isFinite(q))return;
+      if(!byName.has(key))byName.set(key,q);
+      if(window.KOSStableItemId){
+        const id=window.KOSStableItemId.stableIdForName(name);
+        if(!byStable.has(id))byStable.set(id,q);
+      }
+    });
+
+    Object.values(centralData).flat().forEach(row=>{
+      const code=String(row[6]||'').trim(),seq=Number(row[5]),name=row[0];
+      let q;
+      if(code&&byCode.has(code))q=byCode.get(code);
+      else if(Number.isFinite(seq)&&bySeq.has(seq))q=bySeq.get(seq);
+      else if(window.KOSStableItemId){
+        const id=window.KOSStableItemId.stableIdForName(name);
+        if(byStable.has(id))q=byStable.get(id);
+      }
+      if(!Number.isFinite(q)){
+        const x=byName.get(nrm(name));
+        if(Number.isFinite(x))q=x;
+      }
+      row[4]=Number.isFinite(q)?q:0;
+    });
+  };
+  window.KOS_DELIVERY_MATCH_VERSION='v27-unified-delivery-20260826';
+})();
+</script>
 </body></html>
