@@ -316,7 +316,18 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
   function codeFor(name){
     const k=nrm(name);
     if(masterCode[k]) return masterCode[k];
-    // 已確認歷史名稱
+
+    // v29：Daily 顯示名稱常會多出規格，例如：
+    // 「舒肥雞腿 KG 110G/份」vs 到貨主檔「舒肥雞腿 KG」。
+    // 不能要求整串品名完全相同；改用「主檔名稱為 Daily 名稱前綴」，
+    // 並取最長匹配，避免短名稱誤配到別品項。
+    let bestKey='';
+    for(const mk of Object.keys(masterCode)){
+      if(k.startsWith(mk) && mk.length>bestKey.length) bestKey=mk;
+    }
+    if(bestKey) return masterCode[bestKey];
+
+    // 已確認歷史名稱保底
     if(k.includes('培根')) return 'CKH000020';
     if(k.includes('修清肋眼')) return 'CKC000015';
     return '';
@@ -360,7 +371,8 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
 
     Object.values(centralData).flat().forEach(row=>{
       const displayName=row[0];
-      const code=String(row[6]||codeFor(displayName)||'').trim();
+      const authoritativeCode=codeFor(displayName);
+      const code=String(authoritativeCode||row[6]||'').trim();
       let q;
       if(code&&byCode.has(code))q=byCode.get(code);
       if(!Number.isFinite(q)&&window.KOSStableItemId){
@@ -374,7 +386,7 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
       row[4]=Number.isFinite(q)?q:0;
     });
   };
-  window.KOS_DELIVERY_MATCH_VERSION='v28-master-productcode-20260826';
+  window.KOS_DELIVERY_MATCH_VERSION='v29-name-suffix-productcode-20260826';
 })();
 </script>
 </body></html>
