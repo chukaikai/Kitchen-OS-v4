@@ -826,7 +826,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">週盤保底直載版 v9 2026-08-24</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">Cold 鮭魚歸屬修正版 v19 2026-08-26</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -1462,6 +1462,12 @@ const pizzaSweetBasil = ensureStationWeeklyItem("pizza", "145015SS", "特規甜�
 const pizzaGarlic = ensureStationWeeklyItem("pizza", "142019SS", "蒜仁-大 /公斤", "Kg / 公斤");
 const pizzaMushroom = ensureStationWeeklyItem("pizza", "142016SS", "濕香菇/中/5公分/公斤", "Kg / 公斤");
 const s1Salmon = ensureStationWeeklyItem("s1", "131002SS", "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱", "Ea / 個");
+
+// v19：鮭魚週盤歸屬改為 S1。
+// Cold 正確基準表不含 131002SS，因此從 Cold 週盤主清單移除；
+// S1 的鮭魚品項與「切鮭魚」備料回推規則保留，不影響整店總表。
+STATIONS.cold.items = STATIONS.cold.items.filter((item) => item.code !== "131002SS");
+
 
 PREP_TO_WEEKLY.pizza.push(
   { targetCode: pizzaSweetBasil.code, targetName: "特規甜蘿勒", sourceName: "甜羅勒葉", sources: [[2, 1]], note: "甜羅勒葉：備料以kg盤點，等量回推特規甜蘿勒" },
