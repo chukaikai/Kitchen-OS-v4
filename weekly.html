@@ -826,7 +826,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">S1 排序設定真正套用版 v22 2026-08-26</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">Cold 備料加總回推修正版 v23 2026-08-26</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -2701,11 +2701,13 @@ async function loadPrepInventoryCore() {
         if (raw === "" || raw == null || !Number.isFinite(Number(raw))) return;
         const target = STATIONS.cold.items.find((item) => item.code === code);
         if (!target) return;
+        // v23：Cold 同一原物料可由多個半成品共同回推，必須加總，不可互相覆蓋。
+        // 例如截切美生菜 = 美生菜(4×4cm) 700g + 混合生菜中的美生菜比例。
+        const existing = convertedByTarget.get(target.order) || { value: 0, notes: [] };
         if (!convertedByTarget.has(target.order)) linked += 1;
-        convertedByTarget.set(target.order, {
-          value: Number(raw) * factor,
-          notes: [note],
-        });
+        existing.value += Number(raw) * factor;
+        existing.notes.push(note);
+        convertedByTarget.set(target.order, existing);
       });
     }
 
