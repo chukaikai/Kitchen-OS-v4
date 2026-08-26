@@ -781,7 +781,7 @@ tbody tr:hover .total-cell {
     base.forEach((item,index)=>all.set(idFor(type,item,index),item));
     (Array.isArray(cfg.custom)?cfg.custom:[]).forEach((item,index)=>all.set(idFor(type,item,index),item));
     let ids=[...(cfg.order||[]),...all.keys()].filter((id,i,a)=>a.indexOf(id)===i&&all.has(id));
-    const hidden=new Set(cfg.hidden||[]);
+    const hidden=new Set(cfg.hidden||[]);if(station==="s1"){hidden.delete("131002SS");hidden.delete("鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱");}
     const shade=document.createElement("div");
     shade.style.cssText="position:fixed;inset:0;z-index:20000;background:#0008;padding:18px;overflow:auto";
     shade.innerHTML='<div style="max-width:760px;margin:auto;background:#f6f7f5;border-radius:18px;padding:16px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 style="margin:0">排序與顯示設定</h2><button data-close style="border:0;border-radius:10px;padding:10px 14px">關閉</button></div><p style="color:#65706a">拖曳調整順序；取消勾選可隱藏。設定只套用目前店鋪。</p><div data-list></div><div style="display:flex;gap:10px;margin-top:14px"><button data-reset style="padding:11px;border:0;border-radius:10px">恢復原始排序</button><button data-save style="flex:1;padding:11px;border:0;border-radius:10px;background:#173b2f;color:#fff;font-weight:800">儲存設定</button></div></div>';
@@ -826,7 +826,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">Cold 鮭魚歸屬修正版 v19 2026-08-26</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">S1 鮭魚顯示修正版 v20 2026-08-26</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -1467,6 +1467,18 @@ const s1Salmon = ensureStationWeeklyItem("s1", "131002SS", "鮭魚菲力(帶皮�
 // Cold 正確基準表不含 131002SS，因此從 Cold 週盤主清單移除；
 // S1 的鮭魚品項與「切鮭魚」備料回推規則保留，不影響整店總表。
 STATIONS.cold.items = STATIONS.cold.items.filter((item) => item.code !== "131002SS");
+// v20：鮭魚固定歸屬 S1，且必須出現在 S1 Weekly。
+// 顯示設定若曾留下舊版「隱藏鮭魚」狀態，不得把 S1 鮭魚再次隱藏。
+const s1SalmonIndex = STATIONS.s1.items.findIndex((item) => item.code === "131002SS");
+if (s1SalmonIndex < 0) {
+  STATIONS.s1.items.push({
+    code: "131002SS",
+    name: "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱",
+    unit: "Ea / 個",
+    storage: "冷凍"
+  });
+}
+
 
 
 PREP_TO_WEEKLY.pizza.push(
