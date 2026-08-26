@@ -826,7 +826,7 @@ if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => cac
           <div>
             <p class="eyebrow">KITCHEN OS v4.1</p>
             <h1>Weekly 周盤</h1>
-            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">S1 鮭魚排序修正版 v21 2026-08-26</small>
+            <small style="display:block;margin-top:4px;color:#d9e3dd;font-weight:700">S1 排序設定真正套用版 v22 2026-08-26</small>
           </div>
         </div>
         <div class="save-state" id="saveState" role="status" aria-live="polite">已載入</div>
@@ -1188,10 +1188,26 @@ const BASE_STATION_ITEMS = Object.fromEntries(
   Object.entries(STATIONS).map(([key, value]) => [key, value.items.slice()])
 );
 
-// v9 保底：週盤工作站品項一律先直接使用內建清單。
-// 不讓雲端顯示/排序設定阻斷明日週盤；排序設定可待盤點完成後再恢復。
+// v22：保留 v9 的「不可整站空白」保護，但恢復正常排序／顯示設定。
+// 先修正主清單歸屬：鮭魚只屬於 S1，不屬於 Cold。
+BASE_STATION_ITEMS.cold = BASE_STATION_ITEMS.cold.filter((item) => item.code !== "131002SS");
+if (!BASE_STATION_ITEMS.s1.some((item) => item.code === "131002SS")) {
+  BASE_STATION_ITEMS.s1.push({
+    order: Math.max(0, ...BASE_STATION_ITEMS.s1.map((item) => Number(item.order) || 0)) + 1,
+    code: "131002SS",
+    name: "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱",
+    unit: "Ea / 個",
+    location: "冷凍",
+  });
+}
+// 真正把每站「排序／顯示設定」套回 Weekly。
+// KitchenItemSettings.apply 本身已有：若異常造成整站空白，就退回完整 base 的保護。
 Object.keys(STATIONS).forEach((stationKey) => {
-  STATIONS[stationKey].items = BASE_STATION_ITEMS[stationKey].map((item) => ({ ...item }));
+  STATIONS[stationKey].items = KitchenItemSettings.apply(
+    "weekly",
+    stationKey,
+    BASE_STATION_ITEMS[stationKey].map((item) => ({ ...item })),
+  );
 });
 
 const inventoryBody = document.querySelector("#inventoryBody");
@@ -1462,24 +1478,6 @@ const pizzaSweetBasil = ensureStationWeeklyItem("pizza", "145015SS", "特規甜�
 const pizzaGarlic = ensureStationWeeklyItem("pizza", "142019SS", "蒜仁-大 /公斤", "Kg / 公斤");
 const pizzaMushroom = ensureStationWeeklyItem("pizza", "142016SS", "濕香菇/中/5公分/公斤", "Kg / 公斤");
 const s1Salmon = ensureStationWeeklyItem("s1", "131002SS", "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱", "Ea / 個");
-// v21：S1 鮭魚交回正常「排序／顯示設定」管理。
-// 只保證品項存在且不被舊 hidden 狀態吃掉，不在這裡固定位置。
-try {
-  const raw = localStorage.getItem("kos-weekly-settings");
-  if (raw) {
-    const cfg = JSON.parse(raw);
-    const s1cfg = cfg?.s1;
-    if (s1cfg) {
-      if (Array.isArray(s1cfg.hidden)) {
-        s1cfg.hidden = s1cfg.hidden.filter(x => x !== "131002SS" && x !== "鮭魚菲力(帶皮去鱗)-(90/110) 30片/箱");
-      }
-      if (Array.isArray(s1cfg.order) && !s1cfg.order.includes("131002SS")) {
-        s1cfg.order.push("131002SS");
-      }
-      localStorage.setItem("kos-weekly-settings", JSON.stringify(cfg));
-    }
-  }
-} catch(e) {}
 
 
 // v19：鮭魚週盤歸屬改為 S1。
