@@ -1352,15 +1352,9 @@ const PREP_TO_WEEKLY = {
     { order: 37, sourceNames: ["西芹片", "西芹半月片"], sources: [[18, 0.25], [24, 0.25]] },
     { order: 38, sourceName: "九層塔", sources: [[3, 0.03]] },
     { order: 40, sourceName: "香菜", sources: [[2, 0.03]] },
-    {
-      targetCode: "142044SS",
-      targetName: "截切美生菜3*3公分",
-      sourceName: "美生菜",
-      order: 32,
-      sources: [[1, 0.7]],
-      note: "美生菜：每盒700g，回推截切美生菜3*3公分0.7kg",
-    },
-    { order: 43, sourceName: "羽衣甘藍", sources: [[0, 0.3]] },
+    // v35：美生菜與羽衣甘藍的固定盒裝回推統一交由下方 directColdPrep 處理。
+    // 這裡不可再重複建立規則，否則 10盒美生菜會 7kg + 7kg = 14kg。
+    // 混合生菜的拆料回推仍保留，會另外加總到相同原物料。
     { order: 55, sourceName: "烤過花生", sources: [[20, 0.25]] },
     { order: 56, sourceName: "烤過白芝麻", sources: [[21, 0.25]] },
   ],
@@ -2675,7 +2669,7 @@ async function loadPrepInventoryCore() {
       }
     });
 
-    // Cold 前兩項是固定規格的鮮蔬。舊存檔曾出現 X／×、全形字元與列名差異，
+    // v35 Cold 回推：前兩項固定規格鮮蔬只在這裡計算一次，避免與 PREP_TO_WEEKLY 重複加總。\n    // Cold 前兩項是固定規格的鮮蔬。舊存檔曾出現 X／×、全形字元與列名差異，
     // 這兩項直接用品名找原始盤點，再用品項代碼定位 Weekly，完全不依賴列號。
     if (station === "cold") {
       const directColdPrep = [
