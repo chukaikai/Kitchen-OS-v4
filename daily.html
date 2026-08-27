@@ -74,20 +74,7 @@ function applyDelivery(x){
     // 培根兩邊完整名稱差很多，但主體唯一
     if(v.includes('培根')) return '乾醃熟燻畢可培根';
 
-    // v34：依 8/27 Firebase values 與 Daily 實際名稱建立固定對照
-    const aliases={
-      '舒肥章魚kg75g/份':'舒肥章魚kg',
-      '柏迪耶海鹽奶油8顆/包':'柏迪耶海鹽奶油8ea/包',
-      '科克蘭西班牙冷壓初榨橄欖油3公升':'西班牙初榨橄欖油3l/瓶',
-      '畢可客製義式絞肉1kg/包成品量一盒400g約0.5包':'畢可客製義式絞肉/kg',
-      '寬帶麵120g10bag/pack':'寬帶麵120g10bag/pack',
-      '彎管通心粉110g10bag/pack':'彎管通心粉110g10bag/pack',
-      '波隆那肉醬bag':'波隆那肉醬2kg*6包/箱',
-      '紅蝦高湯1600g/包':'紅蝦高湯1.6kg/包',
-      '蕃茄調味汁600g/包':'番茄調味汁600g/包',
-      '成型漢堡200g/顆':'成型漢堡10cm/200g/顆'
-    };
-    return aliases[v]||v;
+    return v;
   }
 
   const expected=x.expected||{};
