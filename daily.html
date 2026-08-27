@@ -45,42 +45,70 @@ const shortDate=key=>{const [y,m,d]=key.split('-').map(Number);return `${m}/${d}
 function resetDeliveries(){Object.values(centralData).flat().forEach(r=>r[4]=0)}
 function applyDelivery(x){
   if(!x)return;
-  const fixed=window.KOSItemMaster?window.KOSItemMaster.buildDeliveryIdMaps(x):x;
-  importedCentral=fixed;
-  localStorage.setItem('kos-import-central-current',JSON.stringify(fixed));
+  importedCentral=x;
+  try{localStorage.setItem('kos-import-central-current',JSON.stringify(x));}catch(e){}
 
-  // v10：今日到貨優先用「央廚現場次序 centralSeq」對應。
-  // 品名／規格即使曾改名（例如起司品項），只要現場次序相同仍可正確帶入實到。
-  const seqActual=new Map();
-  const values=fixed.values||{};
-  (fixed.sourceRows||[]).forEach(row=>{
-    const seq=Number(row.centralSeq ?? row.siteSeq);
-    if(!Number.isFinite(seq))return;
-    let raw;
-    if(row.name!=null && Object.prototype.hasOwnProperty.call(values,row.name)){
-      raw=values[row.name];
-    }else if(fixed.valuesById && row.itemId && Object.prototype.hasOwnProperty.call(fixed.valuesById,row.itemId)){
-      raw=fixed.valuesById[row.itemId];
-    }
-    const n=Number(raw);
-    if(Number.isFinite(n))seqActual.set(seq,n);
+  // v32：唯一今日到貨引擎。
+  // 正式規則：只以「當天 expected + values 的品名」安全配對，
+  // 不使用 Daily 舊產品碼、畫面 #、央廚次序、陣列位置。
+  const norm=s=>String(s??'').normalize('NFKC').toLowerCase()
+    .replace(/公斤/g,'kg').replace(/公克/g,'g')
+    .replace(/袋/g,'bag').replace(/包裝/g,'包')
+    .replace(/／/g,'/').replace(/[－–—_]/g,'-')
+    .replace(/[\s　]/g,'').replace(/[()（）]/g,'');
+
+  function canon(name){
+    let v=norm(name);
+
+    // 單位文字統一
+    v=v.replace(/\/bag/g,'/包').replace(/bag$/g,'包');
+
+    // Daily 額外加在品名後方的「每份規格」不屬於到貨品名本體
+    v=v.replace(/kg110g\/份$/,'kg');
+    v=v.replace(/kg210g\/份$/,'kg');
+
+    // 已確認同品項的歷史名稱
+    v=v.replace(/^原味瑞可塔起司/,'瑞可塔起司');
+    v=v.replace(/ricotta/g,'');
+
+    // 培根兩邊完整名稱差很多，但主體唯一
+    if(v.includes('培根')) return '乾醃熟燻畢可培根';
+
+    return v;
+  }
+
+  const expected=x.expected||{};
+  const values=x.values||{};
+  const expectedCanon=new Set(Object.keys(expected).map(canon));
+  const actual=[];
+
+  // 只接受「今天應到」清單裡的實到，避免舊 Firestore 殘值復活
+  Object.entries(values).forEach(([name,raw])=>{
+    const qty=Number(raw);
+    const key=canon(name);
+    if(!Number.isFinite(qty) || !expectedCanon.has(key)) return;
+    actual.push({key,qty,name});
   });
 
-  // v13：只接受「今天應到清單」中存在的實到值。
-  // Firestore 舊版使用 merge:true，可能把過去/舊匯入的 values 留在同一天文件裡；
-  // 若不過濾，未到貨品項也可能被舊值帶入。
-  const expectedKeys=new Set(Object.keys(fixed.expected||{}).map(itemKey));
-  const fallbackMap=new Map(
-    Object.entries(values)
-      .filter(([k])=>expectedKeys.has(itemKey(k)))
-      .map(([k,v])=>[itemKey(k),Number(v)])
-  );
-  Object.values(centralData).flat().forEach(r=>{
-    // v12：今日到貨只用品項名稱固定 key（含明確歷史別名）配對。
-    // 禁止使用畫面 # / 次序 / 舊 Item ID 保底，避免不同清單的相同數字互相錯配。
-    // 例如驗收到貨 #8 是 Pizza 麵團，不得被套到 Daily 第 8 項瑞可塔。
-    const v=fallbackMap.get(itemKey(r[0]));
-    r[4]=Number.isFinite(v)?v:0;
+  Object.values(centralData).flat().forEach(row=>{
+    const target=canon(row[0]);
+
+    // 先做完整標準化名稱匹配
+    let matches=actual.filter(a=>a.key===target);
+
+    // 若仍沒匹配，再允許「唯一」的前綴候選；
+    // 多於一個候選則一律 0，寧可漏顯示也不錯套。
+    if(matches.length===0){
+      matches=actual.filter(a=>{
+        const k=a.key;
+        return k.length>=4 && target.length>=4 &&
+          (k.startsWith(target) || target.startsWith(k));
+      });
+    }
+
+    row[4]=(matches.length===1 && Number.isFinite(matches[0].qty))
+      ? matches[0].qty
+      : 0;
   });
 }
 let deliveryLabel='',previousLabel='';
@@ -164,229 +192,53 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
 <script src="store-defaults.js?v=20260820-ribeye-towel-three-store-v1"></script>
 <script src="item-settings.js?v=20260822-cloud-v1"></script>
 <script src="daily-settings-runtime.js?v=20260820-ribeye-towel-three-store-v1"></script>
+<!-- v32: legacy delivery override blocks removed; single engine is main applyDelivery() -->
 
+<style>
+#kosDeliveryDebug{position:fixed;right:12px;bottom:12px;z-index:99999}
+#kosDeliveryDebug button{border:0;border-radius:10px;padding:10px 14px;background:#7a1f1f;color:#fff;font-weight:700}
+#kosDeliveryDebugPanel{display:none;position:fixed;left:3vw;right:3vw;top:8vh;bottom:8vh;background:#fff;border:2px solid #7a1f1f;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:100000;padding:16px;overflow:auto}
+#kosDeliveryDebugPanel pre{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5}
+#kosDeliveryDebugPanel .close{position:sticky;top:0;float:right}
+</style>
+<div id="kosDeliveryDebug"><button type="button" onclick="KOSShowDeliveryDebug()">到貨除錯</button></div>
+<div id="kosDeliveryDebugPanel">
+  <button class="close" type="button" onclick="document.getElementById('kosDeliveryDebugPanel').style.display='none'">關閉</button>
+  <h2>今日到貨除錯資料</h2>
+  <pre id="kosDeliveryDebugText"></pre>
+</div>
 <script>
-/* v14 最終保護層：
-   daily-settings-runtime.js 是舊版外部檔，GitHub 上可能仍存在並覆寫到貨配對邏輯。
-   因此必須在所有外部 runtime 載入「之後」再覆寫 applyDelivery，
-   確保任何工作站都只用品項名稱／已確認別名配對，不再使用畫面 # 或陣列索引。
-*/
-(function(){
-  function safeNorm(s){
-    return String(s ?? '')
-      .toLowerCase()
-      .replace(/[\s　]/g,'')
-      .replace(/[－–—_]/g,'-')
-      .replace(/[（）]/g,m=>m==='（'?'(':')')
-      .replace(/公斤/g,'kg')
-      .replace(/公克/g,'g');
+window.KOSShowDeliveryDebug=function(){
+  const doc=(typeof importedCentral!=='undefined'&&importedCentral)||null;
+  const out=[];
+  out.push('日期：'+((document.getElementById('date')||{}).value||''));
+  out.push('店鋪：'+(window.KitchenStore?.current?.id||''));
+  out.push('');
+  if(!doc){
+    out.push('❌ importedCentral = null，Daily 沒讀到當日 delivery 文件');
+  }else{
+    out.push('✅ 已讀到 delivery 文件');
+    out.push('verified: '+String(doc.verified));
+    out.push('deliveryDate: '+String(doc.deliveryDate||''));
+    out.push('sourceSheet: '+String(doc.sourceSheet||''));
+    out.push('');
+    out.push('=== expected ===');
+    out.push(JSON.stringify(doc.expected||{},null,2));
+    out.push('');
+    out.push('=== values ===');
+    out.push(JSON.stringify(doc.values||{},null,2));
+    out.push('');
+    out.push('=== sourceRows ===');
+    out.push(JSON.stringify(doc.sourceRows||[],null,2));
   }
-
-  function safeKey(s){
-    const n = safeNorm(s);
-    if (/乾醃熟燻畢可培根/.test(n)) return '乾醃熟燻畢可培根';
-    if (/修清肋眼/.test(n)) return '修清肋眼';
-
-    // Pizza 已確認歷史名稱
-    if (/(退冰)?綜合起司包|5-?cheese|綜合起司.*10份|綜合起司包10bag\/pack/.test(n))
-      return 'pizza-綜合起司包';
-
-    if (/佛特樂(乾酪|起司)?/.test(n))
-      return 'pizza-佛特樂起司';
-
-    return n;
-  }
-
-  window.applyDelivery = function(x){
-    if(!x) return;
-
-    const fixed = (window.KOSItemMaster && typeof window.KOSItemMaster.buildDeliveryIdMaps === 'function')
-      ? window.KOSItemMaster.buildDeliveryIdMaps(x)
-      : x;
-
-    importedCentral = fixed;
-    try {
-      localStorage.setItem('kos-import-central-current', JSON.stringify(fixed));
-    } catch(e) {}
-
-    const expectedKeys = new Set(
-      Object.keys(fixed.expected || {}).map(safeKey)
-    );
-
-    const valueMap = new Map(
-      Object.entries(fixed.values || {})
-        .filter(([name]) => expectedKeys.has(safeKey(name)))
-        .map(([name, value]) => [safeKey(name), Number(value)])
-        .filter(([, value]) => Number.isFinite(value))
-    );
-
-    Object.values(centralData).flat().forEach(row => {
-      const value = valueMap.get(safeKey(row[0]));
-      row[4] = Number.isFinite(value) ? value : 0;
-    });
-  };
-
-  window.KOS_DELIVERY_MATCH_VERSION = 'v14-runtime-final-guard-20260824';
-})();
-</script>
-<script src="stable-item-id.js?v=20260825-v15"></script>
-<script>
-(function(){
-  window.applyDelivery=function(x){
-    if(!x)return;
-    const fixed=window.KOSStableItemId.migrate(x);
-    importedCentral=fixed;
-    try{localStorage.setItem('kos-import-central-current',JSON.stringify(fixed));}catch(e){}
-    const exp=fixed.expectedById||{}, vals=fixed.valuesById||{};
-    Object.values(centralData).flat().forEach(row=>{
-      const id=window.KOSStableItemId.stableIdForName(row[0]);
-      if(!Object.prototype.hasOwnProperty.call(exp,id)){row[4]=0;return;}
-      const n=Number(vals[id]); row[4]=Number.isFinite(n)?n:0;
-    });
-  };
-  window.KOS_DELIVERY_MATCH_VERSION='v15-stable-item-id';
-})();
-</script>
-
-<script>
-(function(){
-  const excelNameToCode={"舒肥章魚 KG":"CKC048","蒔蘿油 200G/BAG":"CKD000011","雞肝慕斯 350G/BAG":"CKD000004","焦化洋蔥泥-200G/BAG":"CKD000010","酸種麵包切片 10片":"169049CK","草莓醬 200G/BAG":"173003CK","番茄沙拉醃汁-350G/BAG":"CKB000046","巴西里油-300G/BAG":"CKD000008","醃杏桃醋汁(羊排) 100G/BAG":"CKD000009","TYSON黃玉米餅2.12K/BAG .":"CKD000003","墨西哥沙拉醬-800G/BAG":"169023CK","泰式沙拉醬-800G/包":"CKC000006","札塔沙拉醬-800G/BAG":"CKC000003","蒔蘿優格醬-800G/BAG":"CKC000007","醃紫高麗-800G/BAG":"CKH000008","黑橄欖醬-200G/BAG":"CKC000011","紅酒醋凍-450G/BAG":"CKC000023-3","章魚美乃滋-600G/BAG":"CKC000010","鹽漬檸檬 4EA/BAG":"CKM000003","巧克力蛋糕 10片/模":"CKH000042","起司蛋糕 8份/1模最低叫貨2模":"CKC049","艾樂薇 35%動物鮮奶油 (1L/12btl/cs).":"CKC050","巧克力粉 100G/BAG":"CKH000007","巧克力脆片 50G/BAG":"CKB000053","葡萄糖漿 300G/BAG":"CKH000011","胡桃派 8份/1模":"CKH000006","Familia瑞士全家葡萄綜合穀物 500g 6入":"CKMM000002","玉米罐頭340g 12罐/組":"CKC000004","札塔麵包碎-200G/BAG":"CKH000010","冷凍Pizza麵團275G 6EA/BAG":"CKC000014","乾醃熟燻畢可培根-(2mm/40mm/切片/公":"CKH000020","烤馬鈴薯片 1KG/BAG":"174002CK","畢可 客製義式絞肉/公斤":"163011CK","原味瑞可塔起司 1000G/BAG":"CKH000034","農夫派底醬 1800G/BAG":"182002CK","香菇派底醬-1100G/BAG":"CKH000044","帶殼溫泉蛋/10粒 /盒":"CKC000018","辣蜂蜜-250G/BAG":"CKC047","西班牙初榨橄欖油 3L/瓶":"CKD000012","黑松露油250ml/BOT .":"1130011CK","玉米餃8pc  10BAG/PACK":"CKP000005","寬帶麵120G  10BAG/PACK":"CKP000008","細扁麵120G  10BAG/PACK":"CKP000009","細麵120G  10BAG/PACK":"CKP000010","墨魚細麵120G  10BAG/PACK":"152001CK","麵疙瘩120G  10BAG/PACK":"CKH000019","彎管通心粉110G  10BAG/PACK":"CKH000015","波隆那肉醬2KG*6包 /箱":"CKH000009","羅勒油-150G/BAG":"CKH000017","油封蒜碎-1000G/BAG":"CKH000032","油封蔬菜-500G/BAG":"CKH000028","蛤蠣醬-850G/BAG":"CKH053","墨魚肉醬-1.2KG/BAG":"CKC052","墨魚絲640G/BAG":"CKH000033","燉羊肉醬 1800G/BAG":"CKC000025","山羊起司醬 100G/BAG":"CKMM000005","伏特加辣番茄醬 850G/BAG":"CKH000025","紅蝦高湯 1.6KG/BAG":"CKH059","巴西里青醬 250G/BAG":"CKH000029","帕馬森起司高湯 1KG/BAG":"CKC000017","牛油 500G/BAG":"CKH000026","帕達諾起司粉 1000G/BAG":"CKH000031","白酒甘蔥碎 200G/BAG":"CKP000006","醃紅辣椒片 125G/BAG":"CKP000007","油封蕃茄-500G/BAG":"CKP000004","檸檬瑞可塔起司-400G/BAG":"163006CK","香蒜麵包碎-200G/BAG":"CKH000030","乾辣椒碎 200G/BAG":"CKH000016","紫高麗菜泥 250G/BAG":"CKM000002","香料雞汁-200G/BAG":"CKM000001","褐色雞湯 200G/BAG":"CKMM000001","白洋蔥底醬 125G/BAG":"CKH000035","香料油-300G/BAG":"CKH000024","黑蒜醬 300G/BAG":"CKMM000003","鯷魚奶油 300G/ 條":"CKC000022","預拌薯泥-450G/BAG":"CKH000021","瑪莉娜拉蕃茄醬-1KG/BAG":"CKH000036","香料麵包粉(牛小排) 200G/BAG":"CKH000023","A-PEN麵包粉-500G/BAG":"CKH000001","漢堡麵包 6EA/BAG":"CKH000012","成型漢堡 (10cm/200g/顆)":"114002CK","肋眼牛排 454G":"CKC000015","舒肥羊排 500g/包":"CKC000019","羊排紅椒醬-300G/BAG":"CKC000013","醃黃瓜片-300G/BAG":"CKH000018","醃黃瓜條 10EA/BAG":"CKC000026"};
-  const norm=s=>String(s??'').normalize('NFKC').toLowerCase().replace(/[\s　]/g,'').replace(/[－–—_]/g,'').replace(/公斤/g,'kg').replace(/公克/g,'g').replace(/／/g,'/');
-  const normalizedCode=new Map(Object.entries(excelNameToCode).map(([n,c])=>[norm(n),String(c).trim()]));
-  const explicit=new Map([[norm('艾樂薇35%動物鮮奶油 1L'),'CKC050'],[norm('乾醃熟燻畢可培根'),'CKH000020'],[norm('修清肋眼-(PRI/切片/公斤)'),'CKC000015'],[norm('原味瑞可塔起司 1000G/BAG'),'CKH000034'],[norm('瑞可塔起司 Ricotta 1000G/BAG'),'CKH000034'],[norm('瑞可塔起司 1000G/BAG'),'CKH000034']]);
-  function codeForName(name){
-    const n=norm(name);
-    // v24：培根在到貨驗證與 Daily 的品名不同，固定以產品碼 CKH000020 對應。
-    // 只要品名包含「培根」，即視為同一央廚品項，避免截斷名稱造成今日到貨抓不到。
-    if(n.includes('培根')) return 'CKH000020';
-    return normalizedCode.get(n)||explicit.get(n)||'';
-  }
-  function migrateByProductCode(doc){
-    const d=Object.assign({},doc||{}), expectedByProductCode={}, valuesByProductCode={};
-    const rows=Array.isArray(d.sourceRows)?d.sourceRows:[];
-    const rowCode=new Map(rows.map(r=>[norm(r.name),String(r.productCode||codeForName(r.name)||'').trim()]));
-    Object.entries(d.expected||{}).forEach(([name,q])=>{
-      const nName=norm(name);
-      // v25：已確認的培根名稱固定優先 CKH000020。
-      // 不讓舊 sourceRows 內可能殘留的錯誤 productCode 蓋掉正確對應。
-      const code=nName.includes('培根')?'CKH000020':(rowCode.get(nName)||codeForName(name));
-      const n=Number(q);
-      if(code&&Number.isFinite(n)) expectedByProductCode[code]=n;
-    });
-    Object.entries(d.values||{}).forEach(([name,q])=>{
-      const nName=norm(name);
-      const code=nName.includes('培根')?'CKH000020':(rowCode.get(nName)||codeForName(name));
-      const n=Number(q);
-      if(code&&Object.prototype.hasOwnProperty.call(expectedByProductCode,code)&&Number.isFinite(n)) valuesByProductCode[code]=n;
-    });
-    d.expectedByProductCode=expectedByProductCode;d.valuesByProductCode=valuesByProductCode;d.productCodeSchemaVersion=1;return d;
-  }
-  window.KOSProductCode={codeForName,migrateByProductCode,version:'v16-20260826'};
-  window.applyDelivery=function(x){
-    if(!x)return;const fixed=migrateByProductCode(x);importedCentral=fixed;
-    try{localStorage.setItem('kos-import-central-current',JSON.stringify(fixed));}catch(e){}
-    const exp=fixed.expectedByProductCode||{},vals=fixed.valuesByProductCode||{};
-    const baconRaw=Object.entries(fixed.values||{}).find(([name])=>norm(name).includes('培根'));
-    const baconKg=baconRaw?Number(baconRaw[1]):NaN;
-    Object.values(centralData).flat().forEach(row=>{
-      const code=String(row[6]||codeForName(row[0])||'').trim();
-      if(code==='CKH000020'){
-        const byCode=Number(vals['CKH000020']);
-        row[4]=Number.isFinite(baconKg)?baconKg:(Number.isFinite(byCode)?byCode:0);
-        return;
-      }
-      if(!code||!Object.prototype.hasOwnProperty.call(exp,code)){row[4]=0;return;}
-      const n=Number(vals[code]);row[4]=Number.isFinite(n)?n:0;
-    });
-  };
-  window.KOS_DELIVERY_MATCH_VERSION='v26-bacon-weight-kg';
-})();
-</script>
-
-<script>
-/* Kitchen OS v28 — 全站今日到貨主檔對應修正版
-   最新 6603 主檔 421：產品編號為唯一優先鍵。
-   不再使用畫面#、陣列位置、央廚次序配對。 */
-(function(){
-  const nrm=s=>String(s??'').normalize('NFKC').toLowerCase()
-    .replace(/[\s　]/g,'').replace(/[－–—_]/g,'')
-    .replace(/公斤/g,'kg').replace(/公克/g,'g').replace(/／/g,'/');
-  const masterCode={"familia瑞士全家葡萄綜合果物500g6入/cs":"169049CK","葡萄糖漿300g/bag":"CKD000009","札塔麵包碎200g/bag":"CKH000004","巧克力粉100g/bag":"CKD000008","巧克力脆片50g/bag":"CKD000011","西班牙初榨橄欖油3l/瓶":"163011CK","玉米罐頭340g12罐/組":"164017CK","胡桃派8份/1模":"CKD000003","巧克力蛋糕1模":"CKD000010","起司蛋糕8份/1模最低叫貨2模":"CKD000004","艾樂薇35%動物鮮奶油(1l/12btl/cs).":"173003CK","墨西哥沙拉醬800g/bag":"CKC000006","泰式沙拉醬800g/包":"CKC000003","札塔沙拉醬800g/bag":"CKH000003","蒔蘿優格醬800g/bag":"CKC000009","章魚美乃滋600g/bag":"CKC000011","醃紫高麗800g/bag":"CKC000007","黑橄欖醬200g/bag":"CKC000010","紅酒醋凍450g/bag":"CKH000008","雞肝慕斯350g/bag":"CKH000010","焦化洋蔥泥200g/bag":"CKH000007","草莓醬200g/bag":"CKD000012","巴西里油300g/bag":"CKH000006","蒔蘿油200g/bag":"CKH000011","醃杏桃醋汁(羊排)100g/bag":"CKH000042","tyson黃玉米餅2.12k/bag.":"169023CK","酸種麵包切片10片":"CKB000053","白雞湯1125g/bag":"CKH000002","番茄沙拉醃汁350g/bag":"CKC000004","舒肥章魚kg":"CKMM000002","辣蜂蜜250g/bag":"CKH000020","黑松露油250ml/bot.":"163006CK","原味瑞可塔起司1000g/bag":"CKH000044","農夫派底醬1800g/bag":"CKC000018","香菇派底醬1100g/bag":"CKC000014","帶殼溫泉蛋/10粒/盒":"174002CK","冷凍pizza麵團275g6ea/bag":"CKB000046","烤馬鈴薯片1kg/bag":"CKH000034","乾醃熟燻畢可培根(2mm/40mm/切片/公":"1130011CK","畢可客製義式絞肉/kg":"182002CK","檸檬瑞可塔起司400g/bag":"CKC000013","油封蕃茄500g/bag":"CKH000016","醃紅辣椒片125g/bag":"CKH000030","白酒甘蔥碎200g/bag":"CKH000033","玉米餃8pc10bag/pack":"CKP000004","寬帶麵120g10bag/pack":"CKP000007","細扁麵120g10bag/pack":"CKP000006","細麵120g10bag/pack":"CKP000005","墨魚細麵120g10bag/pack":"CKP000008","麵疙瘩120g10bag/pack":"CKP000009","彎管通心粉110g10bag/pack":"CKP000010","羅勒油150g/bag":"CKH000019","油封蔬菜500g/bag":"CKH000017","牛油500g/bag":"CKH000009","山羊起司醬100g/bag":"CKC000017","巴西里青醬250g/bag":"CKH053","帕馬森起司高湯1kg/bag":"CKH000025","帕達諾起司粉1000g/bag":"CKC000025","油封蒜碎1000g/bag":"CKH000015","蛤蠣醬850g/bag":"CKH000028","伏特加辣番茄醬850g/bag":"CKH000031","波隆那肉醬2kg*6包/箱":"152001CK","燉羊肉醬1800g/bag":"CKH000029","紅蝦高湯1600g/bag":"CKH000032","墨魚肉醬1.2kg/bag":"CKH000026","墨魚絲640g/bag":"CKMM000005","香蒜麵包碎200g/bag":"CKH000018","乾辣椒碎200g/bag":"CKC000026","羊排紅椒醬300g/bag":"CKH000005","醃黃瓜片300g/bag":"CKC000012","醃黃瓜條10ea/bag":"CKC000024","鹽漬檸檬10ea/bag":"CKC000023","紫高麗菜泥250g/bag":"CKH000036","香料雞汁200g/bag":"CKH000023","褐色雞湯200g/bag":"CKH000012","白洋蔥底醬125g/bag":"CKH000035","紅辣椒起司醬500g/bag":"CKC000016","香料油300g/bag":"CKH000001","黑蒜醬300g/bag":"CKC000022","鯷魚奶油300g/ea":"CKC000020","預拌薯泥450g/bag":"CKH000021","瑪莉娜拉蕃茄醬1kg/bag":"CKH000024","漢堡麵包6ea/bag":"CKB000051","香料麵包粉(牛小排)200g/bag":"CKC000019","apen麵包粉500g/bag":"CKC000015","肋眼牛排454g":"CKM000003","舒肥羊排500g/bag":"CKMM000004","成型漢堡(10cm/200g/顆)":"114002CK","舒肥牛肋條kg":"CKM000001","舒肥牛小排kg":"CKM000002","舒肥雞腿kg":"CKMM000001","鹽水半雞3隻/bag":"CKMM000003","東遠verstegen粉紅胡椒粒140g":"162062CK","costcoscott萬用強吸力紙抹布55張":"311002CK","辣油300g/bag":"CKH000043","鳳梨果乾40g/10片/bag":"CKC000027","醃番茄沙拉1770g/bag":"CKC000002","羽衣甘藍/kg":"143003CK"};
-
-  function codeFor(name){
-    const k=nrm(name);
-    if(masterCode[k]) return masterCode[k];
-
-    // v29：Daily 顯示名稱常會多出規格，例如：
-    // 「舒肥雞腿 KG 110G/份」vs 到貨主檔「舒肥雞腿 KG」。
-    // 不能要求整串品名完全相同；改用「主檔名稱為 Daily 名稱前綴」，
-    // 並取最長匹配，避免短名稱誤配到別品項。
-    let bestKey='';
-    for(const mk of Object.keys(masterCode)){
-      if(k.startsWith(mk) && mk.length>bestKey.length) bestKey=mk;
-    }
-    if(bestKey) return masterCode[bestKey];
-
-    // 已確認歷史名稱保底
-    if(k.includes('培根')) return 'CKH000020';
-    if(k.includes('修清肋眼')) return 'CKC000015';
-    return '';
-  }
-
-  window.applyDelivery=function(doc){
-    if(!doc)return;
-    importedCentral=doc;
-    try{localStorage.setItem('kos-import-central-current',JSON.stringify(doc));}catch(e){}
-
-    const expected=doc.expected||{}, values=doc.values||{};
-    const expectedKeys=new Set(Object.keys(expected).map(nrm));
-    const rows=Array.isArray(doc.sourceRows)?doc.sourceRows:[];
-
-    const byCode=new Map(), byStable=new Map(), byName=new Map();
-
-    rows.forEach(r=>{
-      if(!r?.name)return;
-      const key=nrm(r.name);
-      if(!expectedKeys.has(key)||!Object.prototype.hasOwnProperty.call(values,r.name))return;
-      const q=Number(values[r.name]);
-      if(!Number.isFinite(q))return;
-      const code=String(r.productCode||codeFor(r.name)||'').trim();
-      if(code)byCode.set(code,q);
-      if(window.KOSStableItemId)byStable.set(window.KOSStableItemId.stableIdForName(r.name),q);
-      byName.set(key,q);
-    });
-
-    // 舊日文件 / sourceRows 不完整保底
-    Object.entries(values).forEach(([name,raw])=>{
-      const key=nrm(name),q=Number(raw);
-      if(!expectedKeys.has(key)||!Number.isFinite(q))return;
-      const code=codeFor(name);
-      if(code&&!byCode.has(code))byCode.set(code,q);
-      if(window.KOSStableItemId){
-        const id=window.KOSStableItemId.stableIdForName(name);
-        if(!byStable.has(id))byStable.set(id,q);
-      }
-      if(!byName.has(key))byName.set(key,q);
-    });
-
-    Object.values(centralData).flat().forEach(row=>{
-      const displayName=row[0];
-      const authoritativeCode=codeFor(displayName);
-      const code=String(authoritativeCode||row[6]||'').trim();
-      let q;
-      if(code&&byCode.has(code))q=byCode.get(code);
-      if(!Number.isFinite(q)&&window.KOSStableItemId){
-        const id=window.KOSStableItemId.stableIdForName(displayName);
-        if(byStable.has(id))q=byStable.get(id);
-      }
-      if(!Number.isFinite(q)){
-        const x=byName.get(nrm(displayName));
-        if(Number.isFinite(x))q=x;
-      }
-      row[4]=Number.isFinite(q)?q:0;
-    });
-  };
-  window.KOS_DELIVERY_MATCH_VERSION='v29-name-suffix-productcode-20260826';
-})();
+  out.push('');
+  out.push('=== Daily 畫面目前今日到貨 ===');
+  Object.entries(centralData).forEach(([station,rows])=>{
+    out.push('['+station+']');
+    rows.forEach(r=>out.push(`${r[5]} | ${r[0]} | 今日到貨=${r[4]} | code=${r[6]||''}`));
+  });
+  document.getElementById('kosDeliveryDebugText').textContent=out.join('\n');
+  document.getElementById('kosDeliveryDebugPanel').style.display='block';
+};
 </script>
 </body></html>
