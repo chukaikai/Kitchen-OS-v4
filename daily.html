@@ -48,67 +48,46 @@ function applyDelivery(x){
   importedCentral=x;
   try{localStorage.setItem('kos-import-central-current',JSON.stringify(x));}catch(e){}
 
-  // v32：唯一今日到貨引擎。
-  // 正式規則：只以「當天 expected + values 的品名」安全配對，
-  // 不使用 Daily 舊產品碼、畫面 #、央廚次序、陣列位置。
   const norm=s=>String(s??'').normalize('NFKC').toLowerCase()
     .replace(/公斤/g,'kg').replace(/公克/g,'g')
     .replace(/袋/g,'bag').replace(/包裝/g,'包')
     .replace(/／/g,'/').replace(/[－–—_]/g,'-')
     .replace(/[\s　]/g,'').replace(/[()（）]/g,'');
 
-  function canon(name){
-    let v=norm(name);
-
-    // 單位文字統一
-    v=v.replace(/\/bag/g,'/包').replace(/bag$/g,'包');
-
-    // Daily 額外加在品名後方的「每份規格」不屬於到貨品名本體
-    v=v.replace(/kg110g\/份$/,'kg');
-    v=v.replace(/kg210g\/份$/,'kg');
-
-    // 已確認同品項的歷史名稱
-    v=v.replace(/^原味瑞可塔起司/,'瑞可塔起司');
-    v=v.replace(/ricotta/g,'');
-
-    // 培根兩邊完整名稱差很多，但主體唯一
-    if(v.includes('培根')) return '乾醃熟燻畢可培根';
-
-    return v;
-  }
+  const alias = new Map([
+    [norm('舒肥章魚 KG'), norm('舒肥章魚 KG 75G/份')],
+    [norm('番茄沙拉醃汁-350G/BAG'), norm('番茄沙拉醃汁-415G/BAG')],
+    [norm('柏迪耶海鹽奶油 8EA/BAG'), norm('柏迪耶海鹽奶油 8顆/包')],
+    [norm('畢可 客製義式絞肉/公斤'), norm('畢可 客製義式絞肉 1kg/包 (成品量一盒400g約0.5包)')],
+    [norm('西班牙初榨橄欖油 3L/瓶'), norm('科克蘭西班牙 冷壓初榨橄欖油 3公升')],
+    [norm('原味瑞可塔起司 1000G/BAG'), norm('瑞可塔起司 Ricotta 1000G/BAG')],
+    [norm('波隆那肉醬2KG*6包 /箱'), norm('波隆那肉醬 BAG')],
+    [norm('紅蝦高湯 1.6KG/BAG'), norm('紅蝦高湯 1600G/BAG')],
+    [norm('番茄調味汁 600G/BAG'), norm('蕃茄調味汁 600G/包')],
+    [norm('成型漢堡 (10cm/200g/顆)'), norm('成型漢堡200G/顆')],
+    [norm('乾醃熟燻畢可培根-(2mm/40mm/切片/公'), norm('乾熟醃燻畢可培根 KG 1包700g 2包1.4K')],
+    [norm('舒肥羊排 500g/包'), norm('舒肥羊排-500g/bag')],
+    [norm('舒肥牛肋條 KG'), norm('舒肥牛肋條 KG 110Ｇ/份')],
+    [norm('舒肥牛小排 KG'), norm('舒肥牛小排 KG 210g/份')],
+    [norm('舒肥雞腿 KG'), norm('舒肥雞腿 KG 110Ｇ/份')]
+  ]);
 
   const expected=x.expected||{};
   const values=x.values||{};
-  const expectedCanon=new Set(Object.keys(expected).map(canon));
-  const actual=[];
+  const expectedKeys=new Set(Object.keys(expected).map(norm));
+  const byDailyKey=new Map();
 
-  // 只接受「今天應到」清單裡的實到，避免舊 Firestore 殘值復活
   Object.entries(values).forEach(([name,raw])=>{
     const qty=Number(raw);
-    const key=canon(name);
-    if(!Number.isFinite(qty) || !expectedCanon.has(key)) return;
-    actual.push({key,qty,name});
+    const sourceKey=norm(name);
+    if(!Number.isFinite(qty) || !expectedKeys.has(sourceKey)) return;
+    const dailyKey=alias.get(sourceKey) || sourceKey;
+    byDailyKey.set(dailyKey, qty);
   });
 
   Object.values(centralData).flat().forEach(row=>{
-    const target=canon(row[0]);
-
-    // 先做完整標準化名稱匹配
-    let matches=actual.filter(a=>a.key===target);
-
-    // 若仍沒匹配，再允許「唯一」的前綴候選；
-    // 多於一個候選則一律 0，寧可漏顯示也不錯套。
-    if(matches.length===0){
-      matches=actual.filter(a=>{
-        const k=a.key;
-        return k.length>=4 && target.length>=4 &&
-          (k.startsWith(target) || target.startsWith(k));
-      });
-    }
-
-    row[4]=(matches.length===1 && Number.isFinite(matches[0].qty))
-      ? matches[0].qty
-      : 0;
+    const key=norm(row[0]);
+    row[4]=byDailyKey.has(key) ? byDailyKey.get(key) : 0;
   });
 }
 let deliveryLabel='',previousLabel='';
@@ -194,51 +173,5 @@ $('date').addEventListener('change',async()=>{if(station){stopLiveSync();await l
 <script src="daily-settings-runtime.js?v=20260820-ribeye-towel-three-store-v1"></script>
 <!-- v32: legacy delivery override blocks removed; single engine is main applyDelivery() -->
 
-<style>
-#kosDeliveryDebug{position:fixed;right:12px;bottom:12px;z-index:99999}
-#kosDeliveryDebug button{border:0;border-radius:10px;padding:10px 14px;background:#7a1f1f;color:#fff;font-weight:700}
-#kosDeliveryDebugPanel{display:none;position:fixed;left:3vw;right:3vw;top:8vh;bottom:8vh;background:#fff;border:2px solid #7a1f1f;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:100000;padding:16px;overflow:auto}
-#kosDeliveryDebugPanel pre{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5}
-#kosDeliveryDebugPanel .close{position:sticky;top:0;float:right}
-</style>
-<div id="kosDeliveryDebug"><button type="button" onclick="KOSShowDeliveryDebug()">到貨除錯</button></div>
-<div id="kosDeliveryDebugPanel">
-  <button class="close" type="button" onclick="document.getElementById('kosDeliveryDebugPanel').style.display='none'">關閉</button>
-  <h2>今日到貨除錯資料</h2>
-  <pre id="kosDeliveryDebugText"></pre>
-</div>
-<script>
-window.KOSShowDeliveryDebug=function(){
-  const doc=(typeof importedCentral!=='undefined'&&importedCentral)||null;
-  const out=[];
-  out.push('日期：'+((document.getElementById('date')||{}).value||''));
-  out.push('店鋪：'+(window.KitchenStore?.current?.id||''));
-  out.push('');
-  if(!doc){
-    out.push('❌ importedCentral = null，Daily 沒讀到當日 delivery 文件');
-  }else{
-    out.push('✅ 已讀到 delivery 文件');
-    out.push('verified: '+String(doc.verified));
-    out.push('deliveryDate: '+String(doc.deliveryDate||''));
-    out.push('sourceSheet: '+String(doc.sourceSheet||''));
-    out.push('');
-    out.push('=== expected ===');
-    out.push(JSON.stringify(doc.expected||{},null,2));
-    out.push('');
-    out.push('=== values ===');
-    out.push(JSON.stringify(doc.values||{},null,2));
-    out.push('');
-    out.push('=== sourceRows ===');
-    out.push(JSON.stringify(doc.sourceRows||[],null,2));
-  }
-  out.push('');
-  out.push('=== Daily 畫面目前今日到貨 ===');
-  Object.entries(centralData).forEach(([station,rows])=>{
-    out.push('['+station+']');
-    rows.forEach(r=>out.push(`${r[5]} | ${r[0]} | 今日到貨=${r[4]} | code=${r[6]||''}`));
-  });
-  document.getElementById('kosDeliveryDebugText').textContent=out.join('\n');
-  document.getElementById('kosDeliveryDebugPanel').style.display='block';
-};
-</script>
+
 </body></html>
