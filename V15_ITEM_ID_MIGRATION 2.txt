@@ -1,0 +1,7 @@
+Kitchen OS v15 — 到貨 Stable Item ID 統一版
+- 到貨驗證與 Daily 統一使用 stable itemId。
+- 禁止以畫面 #、陣列索引、排序位置配對。
+- 舊資料僅以「當日 expected 品項」遷移為 valuesById，未應到品項一律 0。
+- 新驗證資料會直接寫入 expectedById / valuesById / namesById。
+- 已確認歷史別名：綜合起司包、佛特樂起司、乾醃熟燻畢可培根、修清肋眼。
+- Weekly v9 保底直載邏輯保留。
