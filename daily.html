@@ -69,7 +69,9 @@ function applyDelivery(x){
     [norm('舒肥羊排 500g/包'), norm('舒肥羊排-500g/bag')],
     [norm('舒肥牛肋條 KG'), norm('舒肥牛肋條 KG 110Ｇ/份')],
     [norm('舒肥牛小排 KG'), norm('舒肥牛小排 KG 210g/份')],
-    [norm('舒肥雞腿 KG'), norm('舒肥雞腿 KG 110Ｇ/份')]
+    [norm('舒肥雞腿 KG'), norm('舒肥雞腿 KG 110Ｇ/份')],
+    [norm('胡桃派 8份/1模'), norm('胡桃派 1模')],
+    [norm('胡桃派 1模'), norm('胡桃派 8份/1模')]
   ]);
 
   const expected=x.expected||{};
@@ -94,6 +96,8 @@ function applyDelivery(x){
     if(!Number.isFinite(qty) || !expectedKeys.has(sourceKey)) return;
     const dailyKey=alias.get(sourceKey) || sourceKey;
     byDailyKey.set(dailyKey, qty);
+    // 同時保留原名稱，避免不同版本的每日品名在 1模 / 8份/1模 間切換時漏帶。
+    byDailyKey.set(sourceKey, qty);
   });
 
   Object.values(centralData).flat().forEach(row=>{
