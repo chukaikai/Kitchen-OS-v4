@@ -585,6 +585,21 @@ tbody tr:hover .total-cell {
 }
 
 
+/* Supervisor produce quick-weigh UI v27 - true full-width table escape */
+#inventorySection.produce-mode .table-scroll,
+#inventorySection.produce-mode table,
+#inventorySection.produce-mode tbody{display:block!important;width:100%!important;max-width:none!important}
+#inventorySection.produce-mode table{table-layout:auto!important;min-width:0!important}
+#inventorySection.produce-mode thead{display:none!important}
+#inventorySection.produce-mode .produce-quick-row{display:block!important;width:100%!important;max-width:none!important}
+#inventorySection.produce-mode .produce-quick-row>td{display:block!important;width:100%!important;max-width:none!important}
+@media(max-width:700px){
+  #inventorySection.produce-mode{width:100%!important}
+  #inventorySection.produce-mode .produce-workflow{width:100%!important;max-width:none!important;padding:14px 14px 20px!important}
+  #inventorySection.produce-mode .tare-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+}
+@media(max-width:370px){#inventorySection.produce-mode .tare-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+
 /* Supervisor produce quick-weigh UI v26 - full-width mobile layout */
 .produce-quick-row{display:block!important;width:100%!important;margin:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important}
 .produce-quick-row>td{display:block!important;width:100%!important;max-width:none!important;padding:0!important;border:0!important;background:transparent!important}
@@ -2276,6 +2291,7 @@ function renderSummary() {
 }
 
 function renderProduce() {
+  document.querySelector("#inventorySection")?.classList.add("produce-mode");
   const containers = [
     ["小料盒",34,45],["小方盒",53,70],["1L 盒",66,100],["3L 盒",91,134],
     ["5L 盒",167,207],["1/2 5L 盒",418,675],["1/2 8L 盒",524,781],["1/3 3L 盒",282,470],
@@ -2303,7 +2319,7 @@ function renderProduce() {
   function tare(){if(selectedContainer===null)return 0;return containers[selectedContainer][hasLid?2:1]}
   function updateCalc(){const g=toNumber(gross.value),t=tare(),n=Math.max(0,g-t);calc.innerHTML=`容器：${selectedContainer===null?"尚未選擇":containers[selectedContainer][0]}${hasLid?"＋蓋":"（無蓋）"}｜扣重 ${t} g<br><strong>淨重：${formatNumber(n)} g（${formatNumber(n/1000)} kg）</strong>`}
   q.addEventListener("input",search);gross.addEventListener("input",updateCalc);wrap.querySelectorAll(".lid-btn").forEach(b=>b.onclick=()=>{hasLid=b.dataset.lid==="1";wrap.querySelectorAll(".lid-btn").forEach(x=>x.classList.toggle("active",x===b));updateCalc()});
-  function saveQuick(){if(!selectedItem){alert("請先選擇品項");return}let add=0;if(isWeightItem(selectedItem)){if(selectedContainer===null){alert("請選擇容器");return}const g=toNumber(gross.value);if(!g){alert("請輸入秤上總重");return}add=Math.max(0,g-tare())/1000}else{add=toNumber(directQty.value);if(!add){alert("請輸入數量");return}}inventory[selectedItem.order] ||= {};inventory[selectedItem.order].quantity=toNumber(inventory[selectedItem.order].quantity)+add;dirtyWeeklyFields.add(`${activeStation}|${selectedItem.order}|quantity`);saveInventory();gross.value="";directQty.value="";updateCalc();renderResults();q.focus()}
+  function saveQuick(){if(!selectedItem){alert("請先選擇品項");return}let add=0;if(isWeightItem(selectedItem)){if(selectedContainer===null){alert("請選擇容器");return}const g=toNumber(gross.value);if(!g){alert("請輸入秤上總重");return}const t=tare();if(g<t){alert(`秤上總重 ${formatNumber(g)} g 低於容器扣重 ${formatNumber(t)} g，請確認容器或重量。`);gross.focus();return}add=(g-t)/1000}else{add=toNumber(directQty.value);if(!add){alert("請輸入數量");return}}inventory[selectedItem.order] ||= {};inventory[selectedItem.order].quantity=toNumber(inventory[selectedItem.order].quantity)+add;dirtyWeeklyFields.add(`${activeStation}|${selectedItem.order}|quantity`);saveInventory();gross.value="";directQty.value="";updateCalc();renderResults();q.focus()}
   function renderResults(){results.replaceChildren();let count=0;AFTERNOON_PRODUCE_ITEMS.forEach(item=>{const v=produceManualValue(item,inventory);if(!showAll&&!v)return;count++;const r=document.createElement("div");r.className="produce-result";const prep=producePrepTotal(item);r.innerHTML=`<div class="produce-result-name">${item.name}<small>${item.unit}${prep?`｜備料回推 ${formatNumber(prep)}`:""}</small></div><div class="produce-result-value">${formatNumber(v+prep)}</div><button type="button" class="produce-delete">歸零</button>`;r.querySelector("button").onclick=()=>{if(!confirm(`將「${item.name}」主管實盤歸零？`))return;inventory[item.order] ||= {};inventory[item.order].quantity="";dirtyWeeklyFields.add(`${activeStation}|${item.order}|quantity`);saveInventory();renderResults()};results.append(r)});if(!count){const e=document.createElement("div");e.className="produce-empty";e.textContent="尚未儲存任何盤點";results.append(e)}itemCount.textContent=`已盤 ${AFTERNOON_PRODUCE_ITEMS.filter(x=>produceManualValue(x,inventory)>0).length} / ${AFTERNOON_PRODUCE_ITEMS.length} 項`}
   wrap.querySelector("#produceQuickSave").onclick=saveQuick;wrap.querySelector("#produceShowAll").onclick=()=>{showAll=!showAll;wrap.querySelector("#produceShowAll").textContent=showAll?"只看已盤":"完整盤點表";renderResults()};wrap.querySelector("#producePrint").onclick=()=>window.print();wrap.querySelector("#produceClear").onclick=()=>{if(!confirm("確定清除今天所有主管蔬菜實盤？"))return;AFTERNOON_PRODUCE_ITEMS.forEach(item=>{inventory[item.order] ||= {};inventory[item.order].quantity="";dirtyWeeklyFields.add(`${activeStation}|${item.order}|quantity`)});saveInventory();renderResults()};
   renderResults();
@@ -2862,6 +2878,7 @@ function updateTotal(order, target) {
 }
 
 function renderItems() {
+  document.querySelector("#inventorySection")?.classList.toggle("produce-mode", activeStation === "produce");
   if (activeStation === "summary") {
     renderSummary();
     return;
