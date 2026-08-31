@@ -1,0 +1,13 @@
+Kitchen OS v25 — 培根今日到貨真正修正
+
+原因：
+v24 雖然已把「培根」固定映射到 CKH000020，
+但舊的 sourceRows.productCode 在遷移時優先級更高，
+所以如果舊匯入資料裡培根的 productCode 有殘值／錯值，
+仍會蓋掉 CKH000020，Daily 最後顯示 0。
+
+v25：
+- 任何品名包含「培根」的應到／實到資料，一律優先使用 CKH000020。
+- 不再讓舊 sourceRows.productCode 覆蓋這個已確認映射。
+- 不改 0.7 KG/包換算。
+- 不改 Cold 備料回推。

@@ -1,0 +1,15 @@
+Kitchen OS v30
+
+這次確認到前幾版一直無效的程式原因：
+loadDelivery() 實際仍呼叫 main script 內原本的 applyDelivery()。
+v27-v29 是在頁面後方覆寫 window.applyDelivery，
+但沒有可靠地改到 loadDelivery() 真正使用的那個函式。
+
+v30 不再加外層補丁：
+- 直接修改 loadDelivery() 真正的呼叫點。
+- 今日到貨先依 productCode。
+- productCode 不一致時，用安全的品名前綴比對。
+- 可直接處理：
+  到貨「舒肥雞腿 KG」 → Daily「舒肥雞腿 KG 110G/份」
+- 只讀當日 expected 清單內的 values。
+- 不改 Weekly / 備料回推 / 排序 / 盤點輸入。
