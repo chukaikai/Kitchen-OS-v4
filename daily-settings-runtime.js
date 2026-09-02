@@ -20,6 +20,10 @@
     baseCentralData[stationKey]=centralData[stationKey].slice();
     basePrepData[stationKey]=prepData[stationKey].slice();
     centralData[stationKey]=KitchenItemSettings.apply("central",stationKey,baseCentralData[stationKey]);
+    // V42: CKC000014 is authoritative. Prevent legacy store/item settings from changing it back to 1000G/BAG.
+    centralData[stationKey].forEach(row=>{
+      if(String(row?.[6]||"").trim().toUpperCase()==="CKC000014") row[0]="香菇派底醬-1100G/BAG";
+    });
     prepData[stationKey]=KitchenItemSettings.apply("prep",stationKey,basePrepData[stationKey]);
   });
   const originalOpenStation=window.openStation;
