@@ -1,0 +1,7 @@
+Kitchen OS V56｜到貨「實到唯一來源」
+
+1. Daily 今日到貨只讀央廚到貨驗證完成時建立的 actualEntries。
+2. expected、expectedByProductCode、valuesByProductCode、站序、產品代碼與舊快取都不能再補今日到貨。
+3. 沒有實到明細的品項固定顯示 0。
+4. 為避免沿用舊錯誤資料，更新 V56 後，今天的央廚到貨驗證請重新載入並按一次「完成到貨驗證」。
+5. V54/V55 的盤點本機即時保存與雲端補傳保留。
