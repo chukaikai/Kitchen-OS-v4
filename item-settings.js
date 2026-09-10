@@ -70,6 +70,9 @@
   function set(type,station,value){const all=read();all[key(type,station)]=normalizeCfg(value);write(all)}
   function idFor(type,item,index){
     if(type==="weekly") return item._customId||("base:"+(item.code||"")+":"+item.order+":"+item.name);
+    // V60: 央廚有不同品項共用同一產品代碼（例如多款沙拉醬）。
+    // 顯示/隱藏設定不可只用產品代碼，否則取消一項會連動其他品項。
+    if(type==="central") return item._customId||("central:"+(item[5]||index+1)+":"+(item[0]||"")+":"+(item[1]||""));
     return item._customId||item[6]||("base:"+(item[5]||index+1)+":"+item[0]+":"+(item[1]||""));
   }
   function apply(type,station,base){
